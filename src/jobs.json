@@ -1,0 +1,201 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "name": "John Developer",
+      "email": "john@dev.com",
+      "password": "123456",
+      "role": "developer"
+    },
+    {
+      "id": "2",
+      "name": "Jane Employer",
+      "email": "jane@company.com",
+      "password": "123456",
+      "role": "employer"
+    },
+    {
+      "id": "3",
+      "name": "Mike Recruiter",
+      "email": "mike@techcorp.com",
+      "password": "123456",
+      "role": "employer"
+    },
+    {
+      "id": "1755527566391",
+      "name": "Rahamatunnisa Shaik",
+      "email": "fds@sfdf.com",
+      "password": "abcdef",
+      "role": "developer",
+      "userType": "employer"
+    }
+  ],
+  "jobs": [
+    {
+      "id": "2",
+      "title": "Front-End Engineer (React & Redux)",
+      "type": "Full-Time",
+      "location": "Miami, FL",
+      "description": "Join our team as a Front-End Developer in sunny Miami, FL. We are looking for a motivated individual with a passion for crafting beautiful and responsive web applications. Experience with UI/UX design principles and a strong attention to detail are highly desirable.",
+      "salary": "$70K - $80K",
+      "employerId": "1",
+      "company": {
+        "name": "Veneer Solutions",
+        "description": "Veneer Solutions is a creative agency specializing in digital design and development. Our team is dedicated to pushing the boundaries of creativity and innovation to deliver exceptional results for our clients.",
+        "contactEmail": "contact@gmail.in",
+        "contactPhone": "555-555-5555"
+      }
+    },
+    {
+      "id": "3",
+      "title": "React.js Dev",
+      "type": "Full-Time",
+      "location": "Brooklyn, NY",
+      "description": "Are you passionate about front-end development? Join our team in vibrant Brooklyn, NY, and work on exciting projects that make a difference. We offer competitive compensation and a collaborative work environment where your ideas are valued.",
+      "salary": "$70K - $80K",
+      "employerId": "1",
+      "company": {
+        "name": "Dolor Cloud",
+        "description": "Dolor Cloud is a leading technology company specializing in digital solutions for businesses of all sizes. With a focus on innovation and customer satisfaction, we are committed to delivering cutting-edge products and services.",
+        "contactEmail": "contact@dolorsitamet.com",
+        "contactPhone": "555-555-5555"
+      }
+    },
+    {
+      "id": "5",
+      "title": "Full Stack React Developer",
+      "type": "Full-Time",
+      "location": "Atlanta, GA",
+      "description": "Exciting opportunity for a Full-Time Front-End Developer in bustling Atlanta, GA. We are seeking a talented individual with a passion for building elegant and scalable web applications. Join our team and make an impact!",
+      "salary": "$90K - $100K",
+      "employerId": "2",
+      "company": {
+        "name": "Browning Technologies",
+        "description": "Browning Technologies is a rapidly growing technology company specializing in e-commerce solutions. We offer a dynamic and collaborative work environment where employees are encouraged to think creatively and innovate.",
+        "contactEmail": "contact@gmail.com",
+        "contactPhone": "555-555-5555"
+      },
+      "updatedAt": "2025-08-19T05:59:21.207Z"
+    },
+    {
+      "id": "6",
+      "title": "React Native Developer",
+      "type": "Full-Time",
+      "description": "Join our team as a Front-End Developer in beautiful Portland, OR. We are looking for a skilled and enthusiastic individual to help us create innovative web solutions. Competitive salary and great benefits package available.",
+      "location": "Portland, OR",
+      "salary": "$100K - $110K",
+      "employerId": "3",
+      "company": {
+        "name": "Port Solutions INC",
+        "description": "Port Solutions is a leading technology company specializing in software development and digital marketing. We are committed to providing our clients with cutting-edge solutions and our employees with a supportive and rewarding work environment.",
+        "contactEmail": "contact@ipsumlorem.com",
+        "contactPhone": "555-555-5555"
+      }
+    },
+    {
+      "id": "7d4b",
+      "title": "React Developer",
+      "type": "Internship",
+      "location": "Hyderabad",
+      "description": "Need to create UI using react.js for applications",
+      "salary": "Under $50K",
+      "employerId": "3",
+      "company": {
+        "name": "L4G",
+        "description": "",
+        "contactEmail": "l4g@gmail.com",
+        "contactPhone": "1234567890"
+      }
+    },
+    {
+      "id": "abaa",
+      "title": "React Developer",
+      "type": "Full-Time",
+      "location": "Hyderabad",
+      "description": "",
+      "salary": "Under $50K",
+      "employerId": "1",
+      "company": {
+        "name": "L4G",
+        "description": "",
+        "contactEmail": "l4g@gmail.com",
+        "contactPhone": "1234567890"
+      }
+    },
+    {
+      "id": "5bb2",
+      "title": "Software Developer",
+      "type": "Full-Time",
+      "location": "Hyderabad",
+      "description": "",
+      "salary": "Under $50K",
+      "employerId": "2",
+      "company": {
+        "name": "Amazon",
+        "description": "",
+        "contactEmail": "sdsfhdsbj@fkjd",
+        "contactPhone": "09177711512"
+      }
+    },
+    {
+      "id": "0f25",
+      "title": "Rahamatunnisa Shaik",
+      "type": "Full-Time",
+      "location": "India",
+      "description": "",
+      "salary": "Under $50K",
+      "employerId": "3",
+      "company": {
+        "name": "Velagapudi Ramakrishna Siddhartha Engineering College (VRSEC) Vijayawada",
+        "description": "",
+        "contactEmail": "shaik@gmail.co",
+        "contactPhone": "09177711512"
+      }
+    },
+    {
+      "id": "1755338670402",
+      "title": "Front-End Engineer (React & Redux)",
+      "type": "Full-Time",
+      "location": "India",
+      "description": "helo",
+      "salary": "Under $50K",
+      "employerId": "2",
+      "company": {
+        "name": "Velagapudi Ramakrishna Siddhartha Engineering College (VRSEC) Vijayawada",
+        "description": "Velagapudi Ramakrishna Siddhartha Engineering College (VRSEC) Vijayawada",
+        "contactEmail": "fds@sfdf.com",
+        "contactPhone": "09177711512"
+      },
+      "createdAt": "2025-08-16T10:04:30.402Z"
+    }
+  ],
+  "applications": [
+    {
+      "id": "bb58",
+      "jobId": "7d4b",
+      "applicantId": "1",
+      "applicantName": "John Developer",
+      "applicantEmail": "john@dev.com",
+      "appliedAt": "2025-08-16T10:09:56.449Z",
+      "status": "pending"
+    },
+    {
+      "id": "75ca",
+      "jobId": "2",
+      "applicantId": "1",
+      "applicantName": "John Developer",
+      "applicantEmail": "john@dev.com",
+      "appliedAt": "2025-08-19T05:07:16.974Z",
+      "status": "pending"
+    },
+    {
+      "id": "2dc5",
+      "jobId": "2",
+      "applicantId": "1",
+      "applicantName": "John Developer",
+      "applicantEmail": "john@dev.com",
+      "appliedAt": "2025-08-19T05:55:22.804Z",
+      "status": "pending"
+    }
+  ]
+}
