@@ -15,9 +15,8 @@ import EditJobPage from "./pages/EditJobPage";
 import Login from "./components/Login";
 import Signup from "./components/signup";
 import ProtectedRoute from "./components/ProtectedRoute";
-
 const App = () => {
-  // Add New Job
+  // Add New Job                                                                                                                    
   const addJob = async (newJob) => {
     const res = await fetch("/api/jobs", {
       method: "POST",
@@ -96,6 +95,7 @@ const App = () => {
             }
             loader={jobLoader}
           />
+          
 
           {/* View Job - All authenticated users */}
           <Route

@@ -88,7 +88,7 @@ const JobListing = ({ job }) => {
   return (
     <div className="bg-white rounded-xl shadow-md relative">
       {/* Role indicator badge */}
-      {canEditJob(job) && (
+      {isEmployer() && canEditJob(job) && (
         <div className="absolute top-3 right-3">
           <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
             Your Job
@@ -145,7 +145,7 @@ const JobListing = ({ job }) => {
             )}
 
             {/* Edit Button - Only for Job Owner (Employer) */}
-            {canEditJob(job) && (
+            {isEmployer() && canEditJob(job) && (
               <Link
                 to={`/edit-job/${job.id}`}
                 className="h-[36px] bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg text-center text-sm flex items-center justify-center gap-1"
@@ -156,7 +156,7 @@ const JobListing = ({ job }) => {
             )}
 
             {/* Delete Button - Only for Job Owner (Employer) */}
-            {canEditJob(job) && (
+            {isEmployer() && canEditJob(job) && (
               <button
                 onClick={handleDelete}
                 disabled={isDeleting}
