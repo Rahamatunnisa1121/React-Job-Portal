@@ -5,7 +5,23 @@
       "name": "John Developer",
       "email": "john@dev.com",
       "password": "123456",
-      "role": "developer"
+      "role": "developer",
+      "skills": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        8,
+        9,
+        10,
+        11,
+        15,
+        16,
+        17,
+        20
+      ]
     },
     {
       "id": "2",
@@ -26,14 +42,62 @@
       "name": "Rahamatunnisa Shaik",
       "email": "fds@sfdf.com",
       "password": "abcdef",
-      "role": "developer"
+      "role": "developer",
+      "skills": [
+        1,
+        2,
+        3,
+        5,
+        7,
+        8,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        20
+      ]
     },
     {
       "id": "1755754853063",
       "name": "bean",
       "email": "bean@gmail.com",
       "password": "bean123",
-      "role": "developer"
+      "role": "developer",
+      "skills": [
+        1,
+        2,
+        3,
+        5,
+        7,
+        8,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        20
+      ]
+    },
+    {
+      "id": "1755882083859",
+      "name": "Ruhi Shaik",
+      "email": "shaikruhi911@gmail.com",
+      "password": "ruhina",
+      "role": "developer",
+      "skills": [
+        1,
+        2,
+        3,
+        4
+      ]
     }
   ],
   "jobs": [
@@ -44,7 +108,7 @@
       "location": "Miami, FL",
       "description": "Join our team as a Front-End Developer in sunny Miami, FL. We are looking for a motivated individual with a passion for crafting beautiful and responsive web applications. Experience with UI/UX design principles and a strong attention to detail are highly desirable.",
       "salary": "$70K - $80K",
-      "employerId": "1",
+      "employerId": "2",
       "company": {
         "name": "Veneer Solutions",
         "description": "Veneer Solutions is a creative agency specializing in digital design and development. Our team is dedicated to pushing the boundaries of creativity and innovation to deliver exceptional results for our clients.",
@@ -59,7 +123,7 @@
       "location": "Brooklyn, NY",
       "description": "Are you passionate about front-end development? Join our team in vibrant Brooklyn, NY, and work on exciting projects that make a difference. We offer competitive compensation and a collaborative work environment where your ideas are valued.",
       "salary": "$70K - $80K",
-      "employerId": "1",
+      "employerId": "2",
       "company": {
         "name": "Dolor Cloud",
         "description": "Dolor Cloud is a leading technology company specializing in digital solutions for businesses of all sizes. With a focus on innovation and customer satisfaction, we are committed to delivering cutting-edge products and services.",
@@ -221,6 +285,108 @@
       "applicantEmail": "fds@sfdf.com",
       "appliedAt": "2025-08-22T05:23:46.473Z",
       "status": "rejected"
+    },
+    {
+      "id": "1714",
+      "jobId": "3",
+      "employerId": "2",
+      "applicantId": "1",
+      "applicantName": "John Developer",
+      "applicantEmail": "john@dev.com",
+      "appliedAt": "2025-08-22T16:53:26.499Z",
+      "status": "approved"
+    },
+    {
+      "id": "6564",
+      "jobId": "3",
+      "employerId": "2",
+      "applicantId": "1755882083859",
+      "applicantName": "Ruhi Shaik",
+      "applicantEmail": "shaikruhi911@gmail.com",
+      "appliedAt": "2025-08-22T17:03:43.254Z",
+      "status": "pending"
+    }
+  ],
+  "skills": [
+    {
+      "id": "1",
+      "name": "JSX"
+    },
+    {
+      "id": "2",
+      "name": "Components"
+    },
+    {
+      "id": "3",
+      "name": "Props"
+    },
+    {
+      "id": "4",
+      "name": "State Management"
+    },
+    {
+      "id": "5",
+      "name": "Hooks"
+    },
+    {
+      "id": "6",
+      "name": "React Router"
+    },
+    {
+      "id": "7",
+      "name": "Context API"
+    },
+    {
+      "id": "8",
+      "name": "Redux"
+    },
+    {
+      "id": "9",
+      "name": "React Query"
+    },
+    {
+      "id": "10",
+      "name": "Styled Components"
+    },
+    {
+      "id": "11",
+      "name": "Tailwind CSS with React"
+    },
+    {
+      "id": "12",
+      "name": "Next.js"
+    },
+    {
+      "id": "13",
+      "name": "Server-Side Rendering (SSR)"
+    },
+    {
+      "id": "14",
+      "name": "Static Site Generation (SSG)"
+    },
+    {
+      "id": "15",
+      "name": "React Testing Library"
+    },
+    {
+      "id": "16",
+      "name": "Jest"
+    },
+    {
+      "id": "17",
+      "name": "Performance Optimization"
+    },
+    {
+      "id": "18",
+      "name": "Code Splitting & Lazy Loading"
+    },
+    {
+      "id": "19",
+      "name": "Custom Hooks"
+    },
+    {
+      "id": "20",
+      "name": "TypeScript with React"
     }
   ]
 }

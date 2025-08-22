@@ -1,5 +1,5 @@
 // src/components/Signup.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
 import {
@@ -12,6 +12,8 @@ import {
   AlertCircle,
   Loader2,
   CheckCircle,
+  Code,
+  X,
 } from "lucide-react";
 
 const Signup = () => {
@@ -21,19 +23,47 @@ const Signup = () => {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "developer", 
+    role: "developer",
+    skills: [], // Array to store selected skill IDs
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [availableSkills, setAvailableSkills] = useState([]);
+  const [skillsLoading, setSkillsLoading] = useState(false);
+  const [skillsError, setSkillsError] = useState("");
   const { isAuthenticated } = useAuth();
 
   // Redirect if already logged in
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
   }
+
+  // Fetch skills when component mounts
+  useEffect(() => {
+    fetchSkills();
+  }, []);
+
+  const fetchSkills = async () => {
+    setSkillsLoading(true);
+    setSkillsError("");
+
+    try {
+      const response = await fetch("/api/skills");
+      if (!response.ok) {
+        throw new Error("Failed to fetch skills");
+      }
+      const skills = await response.json();
+      setAvailableSkills(skills);
+    } catch (error) {
+      console.error("Error fetching skills:", error);
+      setSkillsError("Failed to load skills. Please try again.");
+    } finally {
+      setSkillsLoading(false);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -48,10 +78,43 @@ const Signup = () => {
       setError("");
     }
 
+    // Reset skills when role changes to employer
+    if (name === "role" && value === "employer") {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+        skills: [], // Clear skills for employers
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
+  };
+
+  // Handle skill selection
+  const handleSkillToggle = (skillId) => {
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      skills: prev.skills.includes(skillId)
+        ? prev.skills.filter((id) => id !== skillId)
+        : [...prev.skills, skillId],
     }));
+  };
+
+  // Remove skill from selection
+  const removeSkill = (skillId) => {
+    setFormData((prev) => ({
+      ...prev,
+      skills: prev.skills.filter((id) => id !== skillId),
+    }));
+  };
+
+  // Get skill name by ID
+  const getSkillName = (skillId) => {
+    const skill = availableSkills.find((s) => s.id === skillId);
+    return skill ? skill.name : "";
   };
 
   const validateEmail = (email) => {
@@ -199,6 +262,9 @@ const Signup = () => {
     if (formData.password !== formData.confirmPassword) {
       return "Passwords do not match";
     }
+    if (formData.role === "developer" && formData.skills.length === 0) {
+      return "Please select at least one skill";
+    }
     return null;
   };
 
@@ -263,6 +329,12 @@ const Signup = () => {
       const { confirmPassword, ...userDataToSave } = formData;
       // Trim email before saving
       userDataToSave.email = userDataToSave.email.trim();
+
+      // If employer, remove skills array
+      if (userDataToSave.role === "employer") {
+        delete userDataToSave.skills;
+      }
+
       await createUser(userDataToSave);
 
       setSuccess(true);
@@ -360,7 +432,7 @@ const Signup = () => {
                   name="email"
                   type="email"
                   value={formData.email}
-                  onChange={handleEmailInput} // Changed to use handleEmailInput for real-time validation
+                  onChange={handleEmailInput}
                   onBlur={handleEmailBlur}
                   required
                   className={`block w-full pl-10 pr-3 py-3 rounded-lg transition-colors duration-200 placeholder-gray-400 
@@ -434,6 +506,93 @@ const Signup = () => {
                 </label>
               </div>
             </div>
+
+            {/* Skills Selection (only for developers) */}
+            {formData.role === "developer" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Code className="h-4 w-4" />
+                    Skills
+                  </div>
+                </label>
+
+                {skillsError && (
+                  <div className="flex items-center gap-2 p-3 mb-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    <span className="text-sm">{skillsError}</span>
+                    <button
+                      type="button"
+                      onClick={fetchSkills}
+                      className="ml-auto text-red-600 hover:text-red-800 underline text-sm"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                )}
+
+                {/* Selected Skills Display */}
+                {formData.skills.length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-xs text-gray-600 mb-2">
+                      Selected skills:
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.skills.map((skillId) => (
+                        <div
+                          key={skillId}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-sm"
+                        >
+                          {getSkillName(skillId)}
+                          <button
+                            type="button"
+                            onClick={() => removeSkill(skillId)}
+                            className="ml-1 text-blue-600 hover:text-blue-800"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Skills Selection */}
+                <div className="border border-gray-300 rounded-lg p-3 max-h-40 overflow-y-auto">
+                  {skillsLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                      <span className="ml-2 text-sm text-gray-600">
+                        Loading skills...
+                      </span>
+                    </div>
+                  ) : availableSkills.length > 0 ? (
+                    <div className="space-y-2">
+                      {availableSkills.map((skill) => (
+                        <label
+                          key={skill.id}
+                          className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={formData.skills.includes(skill.id)}
+                            onChange={() => handleSkillToggle(skill.id)}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          />
+                          <span className="text-sm text-gray-700">
+                            {skill.name}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-sm text-gray-500">
+                      No skills available
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Password Field */}
             <div>
@@ -518,7 +677,11 @@ const Signup = () => {
             {/* Signup Button */}
             <button
               type="submit"
-              disabled={isLoading || emailError} // Disable if there's an email error
+              disabled={
+                isLoading ||
+                emailError ||
+                (formData.role === "developer" && skillsLoading)
+              }
               className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
             >
               {isLoading ? (
