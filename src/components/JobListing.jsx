@@ -2,9 +2,12 @@ import { useState } from "react";
 import { FaMapMarker, FaEdit, FaTrash, FaBriefcase } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useEffect } from "react";
 
 const JobListing = ({ job }) => {
+  //console.log("Job received by JobListing:", job);
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [alreadyApplied, setAlreadyApplied] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -16,20 +19,43 @@ const JobListing = ({ job }) => {
   if (!showFullDescription) {
     description = description.substring(0, 90) + "...";
   }
+  useEffect(() => {
+    const checkIfApplied = async () => {
+      try {
+        const response = await fetch("/api/applications");
+        if (!response.ok) throw new Error("Failed to fetch applications");
+        const data = await response.json();
 
+        // ✅ check if this user already applied to this job
+        const applied = data.some(
+          (app) => app.jobId === job.id && app.applicantId === user.id
+        );
+
+        setAlreadyApplied(applied);
+      } catch (error) {
+        console.error("Error checking applications:", error);
+      }
+    };
+
+    if (isDeveloper()) {
+      checkIfApplied();
+    }
+  }, [job.id, user.id, isDeveloper]);
+  
   const handleApply = async (e) => {
     e.preventDefault();
     setIsApplying(true);
 
     const applicationData = {
       jobId: job.id,
+      employerId: job.employerId,
       applicantId: user.id,
       applicantName: user.name,
       applicantEmail: user.email,
       appliedAt: new Date().toISOString(),
       status: "pending",
     };
-
+    console.log(applicationData);
     try {
       const response = await fetch("http://localhost:8000/applications", {
         method: "POST",
@@ -69,7 +95,7 @@ const JobListing = ({ job }) => {
       const response = await fetch(`http://localhost:8000/jobs/${job.id}`, {
         method: "DELETE",
       });
-
+      
       if (response.ok) {
         alert("Job deleted successfully!");
         // Refresh the page to update the job list
@@ -136,11 +162,15 @@ const JobListing = ({ job }) => {
             {isDeveloper() && (
               <button
                 onClick={handleApply}
-                disabled={isApplying}
+                disabled={isApplying || alreadyApplied}
                 className="h-[36px] bg-green-500 hover:bg-green-600 disabled:bg-green-300 text-white px-3 py-2 rounded-lg text-sm flex items-center justify-center gap-1 disabled:cursor-not-allowed"
               >
-                <FaBriefcase className="text-xs" />
-                {isApplying ? "Applying..." : "Apply"}
+                <FaBriefcase className="text-lg" />
+                {alreadyApplied
+                  ? "Already Applied"
+                  : isApplying
+                  ? "Applying..."
+                  : "Apply Now"}
               </button>
             )}
 

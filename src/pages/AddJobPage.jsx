@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../contexts/AuthContext";
+import { AlertCircle } from "lucide-react";
 
 const AddJobPage = ({ addJobSubmit }) => {
   const [title, setTitle] = useState("");
@@ -34,18 +35,130 @@ const AddJobPage = ({ addJobSubmit }) => {
   }
 
   const validateEmail = (email) => {
-    // Regular expression for email validation: string@string.string
-    const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    return emailRegex.test(email);
+    // More comprehensive email regex
+    const regex =
+      /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    return regex.test(email);
   };
 
+  const getDetailedEmailError = (email) => {
+    if (!email || email.trim() === "") {
+      return "";
+    }
+
+    const trimmedEmail = email.trim();
+
+    // Check for @ symbol
+    if (!trimmedEmail.includes("@")) {
+      return "Email must contain an @ symbol";
+    }
+
+    // Split by @ to check parts
+    const parts = trimmedEmail.split("@");
+
+    // Too many @ symbols
+    if (parts.length !== 2) {
+      return "Email must contain exactly one @ symbol";
+    }
+
+    const [localPart, domainPart] = parts;
+
+    // Check local part (before @)
+    if (!localPart || localPart.length === 0) {
+      return "Email must have text before the @ symbol";
+    }
+
+    // Check domain part (after @)
+    if (!domainPart || domainPart.length === 0) {
+      return "Email must have a domain after the @ symbol";
+    }
+
+    // Check for dot in domain
+    if (!domainPart.includes(".")) {
+      return "Domain must contain a dot (e.g., .com, .org)";
+    }
+
+    // Split domain by dots
+    const domainParts = domainPart.split(".");
+
+    // Check if domain has proper structure
+    if (domainParts.length < 2) {
+      return "Domain must have at least one dot (e.g., .com, .org)";
+    }
+
+    // Check if any domain part is empty
+    if (domainParts.some((part) => part.length === 0)) {
+      return "Domain cannot have empty parts (check your dots)";
+    }
+
+    // Check if domain starts or ends with dot/hyphen
+    if (domainPart.startsWith(".") || domainPart.endsWith(".")) {
+      return "Domain cannot start or end with a dot";
+    }
+
+    if (domainPart.startsWith("-") || domainPart.endsWith("-")) {
+      return "Domain cannot start or end with a hyphen";
+    }
+
+    // Check for valid characters in local part
+    const validLocalRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+$/;
+    if (!validLocalRegex.test(localPart)) {
+      return "Email contains invalid characters before @";
+    }
+
+    // Check for valid characters in domain
+    const validDomainRegex = /^[a-zA-Z0-9.-]+$/;
+    if (!validDomainRegex.test(domainPart)) {
+      return "Domain contains invalid characters";
+    }
+
+    // Check if the last part (TLD) is at least 2 characters
+    const tld = domainParts[domainParts.length - 1];
+    if (tld.length < 2) {
+      return "Domain extension must be at least 2 characters (e.g., .com, .org)";
+    }
+
+    // Check for consecutive dots
+    if (trimmedEmail.includes("..")) {
+      return "Email cannot contain consecutive dots";
+    }
+
+    // If all checks pass but still invalid, use generic message
+    if (!validateEmail(trimmedEmail)) {
+      return "Please enter a valid email address";
+    }
+
+    return ""; // Valid email
+  };
+
+  // Real-time email validation on blur (when user clicks away)
+  const handleEmailBlur = () => {
+    const email = contactEmail.trim();
+
+    if (email === "") {
+      setEmailError(""); // Don't show error for empty field on blur
+      return;
+    }
+
+    const detailedError = getDetailedEmailError(email);
+    setEmailError(detailedError);
+  };
+
+  // Real-time email validation on input
   const handleEmailChange = (e) => {
     const email = e.target.value;
     setContactEmail(email);
 
-    // Clear error when user starts typing
-    if (emailError) {
-      setEmailError("");
+    // Clear error when user starts typing, then validate if there's already an error or field has content
+    if (emailError || email.trim().length > 0) {
+      const trimmedEmail = email.trim();
+
+      if (trimmedEmail.length > 0) {
+        const detailedError = getDetailedEmailError(trimmedEmail);
+        setEmailError(detailedError);
+      } else {
+        setEmailError("");
+      }
     }
   };
 
@@ -54,15 +167,15 @@ const AddJobPage = ({ addJobSubmit }) => {
     setIsSubmitting(true);
 
     // Validate email before submission
-    if (!contactEmail) {
+    if (!contactEmail.trim()) {
       setEmailError("Email is required");
       setIsSubmitting(false);
       return;
     }
-    if (!validateEmail(contactEmail)) {
-      setEmailError(
-        "Please enter a valid email address (e.g., user@example.com)"
-      );
+
+    const detailedError = getDetailedEmailError(contactEmail.trim());
+    if (detailedError) {
+      setEmailError(detailedError);
       setIsSubmitting(false);
       return;
     }
@@ -78,7 +191,7 @@ const AddJobPage = ({ addJobSubmit }) => {
       company: {
         name: companyName,
         description: companyDescription,
-        contactEmail,
+        contactEmail: contactEmail.trim(),
         contactPhone,
       },
       createdAt: new Date().toISOString(), // Add timestamp
@@ -203,7 +316,7 @@ const AddJobPage = ({ addJobSubmit }) => {
                 <option value="$80K - 90K">$80K - $90K</option>
                 <option value="$90K - 100K">$90K - $100K</option>
                 <option value="$100K - 125K">$100K - $125K</option>
-                <option value="$125K - 150K">$125K - $150K</option>
+                <option value="$125K - 150K">$125K - $125K</option>
                 <option value="$150K - 175K">$150K - $175K</option>
                 <option value="$175K - 200K">$175K - $200K</option>
                 <option value="Over $200K">Over $200K</option>
@@ -277,18 +390,22 @@ const AddJobPage = ({ addJobSubmit }) => {
                 type="email"
                 id="contact_email"
                 name="contact_email"
-                className={`border rounded w-full py-2 px-3 ${
-                  emailError ? "border-red-500 bg-red-50" : "border-gray-300"
+                className={`border rounded w-full py-2 px-3 transition-colors duration-200 ${
+                  emailError
+                    ? "border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-500"
+                    : "border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 }`}
                 placeholder="Email for applicants to contact"
                 required
                 value={contactEmail}
                 onChange={handleEmailChange}
+                onBlur={handleEmailBlur}
               />
               {emailError && (
-                <p className="text-red-500 text-sm mt-1 font-medium">
-                  {emailError}
-                </p>
+                <div className="flex items-center gap-2 mt-2 text-red-600">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                  <span className="text-sm font-medium">{emailError}</span>
+                </div>
               )}
             </div>
 
@@ -321,7 +438,7 @@ const AddJobPage = ({ addJobSubmit }) => {
               <button
                 className="bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-300 text-white font-bold py-2 px-4 rounded-full w-full focus:outline-none focus:shadow-outline disabled:cursor-not-allowed"
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || emailError}
               >
                 {isSubmitting ? "Adding Job..." : "Add Job"}
               </button>

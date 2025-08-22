@@ -15,12 +15,13 @@ import {
 } from "lucide-react";
 
 const Signup = () => {
+  const [emailError, setEmailError] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: "",
-    role: "developer", // developer or employer
+    role: "developer", 
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -36,10 +37,148 @@ const Signup = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
+    // Clear email error when user starts typing in email field
+    if (name === "email") {
+      setEmailError("");
+    }
+
+    // Clear general form error when user makes changes
+    if (error) {
+      setError("");
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
+  };
+
+  const validateEmail = (email) => {
+    // More comprehensive email regex
+    const regex =
+      /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    return regex.test(email);
+  };
+
+  const getDetailedEmailError = (email) => {
+    if (!email || email.trim() === "") {
+      return "";
+    }
+
+    const trimmedEmail = email.trim();
+
+    // Check for @ symbol
+    if (!trimmedEmail.includes("@")) {
+      return "Email must contain an @ symbol";
+    }
+
+    // Split by @ to check parts
+    const parts = trimmedEmail.split("@");
+
+    // Too many @ symbols
+    if (parts.length !== 2) {
+      return "Email must contain exactly one @ symbol";
+    }
+
+    const [localPart, domainPart] = parts;
+
+    // Check local part (before @)
+    if (!localPart || localPart.length === 0) {
+      return "Email must have text before the @ symbol";
+    }
+
+    // Check domain part (after @)
+    if (!domainPart || domainPart.length === 0) {
+      return "Email must have a domain after the @ symbol";
+    }
+
+    // Check for dot in domain
+    if (!domainPart.includes(".")) {
+      return "Domain must contain a dot (e.g., .com, .org)";
+    }
+
+    // Split domain by dots
+    const domainParts = domainPart.split(".");
+
+    // Check if domain has proper structure
+    if (domainParts.length < 2) {
+      return "Domain must have at least one dot (e.g., .com, .org)";
+    }
+
+    // Check if any domain part is empty
+    if (domainParts.some((part) => part.length === 0)) {
+      return "Domain cannot have empty parts (check your dots)";
+    }
+
+    // Check if domain starts or ends with dot/hyphen
+    if (domainPart.startsWith(".") || domainPart.endsWith(".")) {
+      return "Domain cannot start or end with a dot";
+    }
+
+    if (domainPart.startsWith("-") || domainPart.endsWith("-")) {
+      return "Domain cannot start or end with a hyphen";
+    }
+
+    // Check for valid characters in local part
+    const validLocalRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+$/;
+    if (!validLocalRegex.test(localPart)) {
+      return "Email contains invalid characters before @";
+    }
+
+    // Check for valid characters in domain
+    const validDomainRegex = /^[a-zA-Z0-9.-]+$/;
+    if (!validDomainRegex.test(domainPart)) {
+      return "Domain contains invalid characters";
+    }
+
+    // Check if the last part (TLD) is at least 2 characters
+    const tld = domainParts[domainParts.length - 1];
+    if (tld.length < 2) {
+      return "Domain extension must be at least 2 characters (e.g., .com, .org)";
+    }
+
+    // Check for consecutive dots
+    if (trimmedEmail.includes("..")) {
+      return "Email cannot contain consecutive dots";
+    }
+
+    // If all checks pass but still invalid, use generic message
+    if (!validateEmail(trimmedEmail)) {
+      return "Please enter a valid email address";
+    }
+
+    return ""; // Valid email
+  };
+
+  // Real-time email validation on blur (when user clicks away)
+  const handleEmailBlur = () => {
+    const email = formData.email.trim();
+
+    if (email === "") {
+      setEmailError(""); // Don't show error for empty field on blur
+      return;
+    }
+
+    const detailedError = getDetailedEmailError(email);
+    setEmailError(detailedError);
+  };
+
+  // Real-time email validation on input (optional - for more immediate feedback)
+  const handleEmailInput = (e) => {
+    handleInputChange(e);
+
+    // Only validate if there's already an error showing or if field has content
+    if (emailError || e.target.value.trim().length > 0) {
+      const email = e.target.value.trim();
+
+      if (email.length > 0) {
+        const detailedError = getDetailedEmailError(email);
+        setEmailError(detailedError);
+      } else {
+        setEmailError("");
+      }
+    }
   };
 
   const validateForm = () => {
@@ -49,8 +188,10 @@ const Signup = () => {
     if (!formData.email.trim()) {
       return "Email is required";
     }
-    if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      return "Please enter a valid email address";
+    if (!validateEmail(formData.email.trim())) {
+      const detailedError = getDetailedEmailError(formData.email.trim());
+      setEmailError(detailedError);
+      return detailedError;
     }
     if (formData.password.length < 6) {
       return "Password must be at least 6 characters long";
@@ -63,9 +204,7 @@ const Signup = () => {
 
   const checkUserExists = async (email) => {
     try {
-      const response = await fetch(
-        `/api/users?email=${email}`
-      );
+      const response = await fetch(`/api/users?email=${email}`);
       const users = await response.json();
       return users.length > 0;
     } catch (error) {
@@ -113,7 +252,7 @@ const Signup = () => {
 
     try {
       // Check if user already exists
-      const userExists = await checkUserExists(formData.email);
+      const userExists = await checkUserExists(formData.email.trim());
       if (userExists) {
         setError("An account with this email already exists");
         setIsLoading(false);
@@ -122,6 +261,8 @@ const Signup = () => {
 
       // Create new user
       const { confirmPassword, ...userDataToSave } = formData;
+      // Trim email before saving
+      userDataToSave.email = userDataToSave.email.trim();
       await createUser(userDataToSave);
 
       setSuccess(true);
@@ -219,11 +360,23 @@ const Signup = () => {
                   name="email"
                   type="email"
                   value={formData.email}
-                  onChange={handleInputChange}
+                  onChange={handleEmailInput} // Changed to use handleEmailInput for real-time validation
+                  onBlur={handleEmailBlur}
                   required
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 placeholder-gray-400"
+                  className={`block w-full pl-10 pr-3 py-3 rounded-lg transition-colors duration-200 placeholder-gray-400 
+                    ${
+                      emailError
+                        ? "border-red-500 focus:border-red-500 focus:ring-red-500 bg-red-50"
+                        : "border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    }`}
                   placeholder="Enter your email"
                 />
+                {emailError && (
+                  <div className="flex items-center gap-2 mt-2 text-red-600">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    <span className="text-sm">{emailError}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -236,15 +389,15 @@ const Signup = () => {
                 <label className="relative">
                   <input
                     type="radio"
-                    name="userType"
+                    name="role"
                     value="developer"
-                    checked={formData.userType === "developer"}
+                    checked={formData.role === "developer"}
                     onChange={handleInputChange}
                     className="sr-only"
                   />
                   <div
                     className={`p-3 rounded-lg border-2 cursor-pointer transition-colors duration-200 ${
-                      formData.userType === "developer"
+                      formData.role === "developer"
                         ? "border-blue-500 bg-blue-50"
                         : "border-gray-300 bg-white hover:border-gray-400"
                     }`}
@@ -260,15 +413,15 @@ const Signup = () => {
                 <label className="relative">
                   <input
                     type="radio"
-                    name="userType"
+                    name="role"
                     value="employer"
-                    checked={formData.userType === "employer"}
+                    checked={formData.role === "employer"}
                     onChange={handleInputChange}
                     className="sr-only"
                   />
                   <div
                     className={`p-3 rounded-lg border-2 cursor-pointer transition-colors duration-200 ${
-                      formData.userType === "employer"
+                      formData.role === "employer"
                         ? "border-indigo-500 bg-indigo-50"
                         : "border-gray-300 bg-white hover:border-gray-400"
                     }`}
@@ -365,7 +518,7 @@ const Signup = () => {
             {/* Signup Button */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || emailError} // Disable if there's an email error
               className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
             >
               {isLoading ? (

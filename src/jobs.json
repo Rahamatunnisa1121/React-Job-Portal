@@ -26,8 +26,14 @@
       "name": "Rahamatunnisa Shaik",
       "email": "fds@sfdf.com",
       "password": "abcdef",
-      "role": "developer",
-      "userType": "employer"
+      "role": "developer"
+    },
+    {
+      "id": "1755754853063",
+      "name": "bean",
+      "email": "bean@gmail.com",
+      "password": "bean123",
+      "role": "developer"
     }
   ],
   "jobs": [
@@ -75,7 +81,7 @@
         "contactEmail": "contact@gmail.com",
         "contactPhone": "555-555-5555"
       },
-      "updatedAt": "2025-08-19T05:59:21.207Z"
+      "updatedAt": "2025-08-21T05:55:52.441Z"
     },
     {
       "id": "6",
@@ -139,7 +145,7 @@
     },
     {
       "id": "0f25",
-      "title": "Rahamatunnisa Shaik",
+      "title": "React Development Intern",
       "type": "Full-Time",
       "location": "India",
       "description": "",
@@ -167,35 +173,54 @@
         "contactPhone": "09177711512"
       },
       "createdAt": "2025-08-16T10:04:30.402Z"
+    },
+    {
+      "id": "1755755401020",
+      "title": "React Developer",
+      "type": "Part-Time",
+      "location": "Atlanta, GA",
+      "description": "Exciting opportunity for a Part-Time Front-End Developer in bustling Atlanta, GA. We are seeking a talented individual with a passion for building elegant and scalable web applications. Join our team and make an impact!",
+      "salary": "$50K - 60K",
+      "employerId": "2",
+      "company": {
+        "name": "Browning Technologies",
+        "description": "Browning Technologies is a rapidly growing technology company specializing in e-commerce solutions. We offer a dynamic and collaborative work environment where employees are encouraged to think creatively and innovate.",
+        "contactEmail": "avanta@gmail.com",
+        "contactPhone": "555-555-2222"
+      },
+      "createdAt": "2025-08-21T05:50:01.020Z"
     }
   ],
   "applications": [
     {
-      "id": "bb58",
-      "jobId": "7d4b",
+      "id": "7565",
+      "jobId": "0f25",
+      "employerId": "3",
       "applicantId": "1",
       "applicantName": "John Developer",
       "applicantEmail": "john@dev.com",
-      "appliedAt": "2025-08-16T10:09:56.449Z",
+      "appliedAt": "2025-08-21T06:26:09.771Z",
       "status": "pending"
     },
     {
-      "id": "75ca",
-      "jobId": "2",
+      "id": "1ff7",
+      "jobId": "5",
+      "employerId": "2",
       "applicantId": "1",
       "applicantName": "John Developer",
       "applicantEmail": "john@dev.com",
-      "appliedAt": "2025-08-19T05:07:16.974Z",
-      "status": "pending"
+      "appliedAt": "2025-08-22T05:22:45.200Z",
+      "status": "approved"
     },
     {
-      "id": "2dc5",
-      "jobId": "2",
-      "applicantId": "1",
-      "applicantName": "John Developer",
-      "applicantEmail": "john@dev.com",
-      "appliedAt": "2025-08-19T05:55:22.804Z",
-      "status": "pending"
+      "id": "fd5a",
+      "jobId": "5",
+      "employerId": "2",
+      "applicantId": "1755527566391",
+      "applicantName": "Rahamatunnisa Shaik",
+      "applicantEmail": "fds@sfdf.com",
+      "appliedAt": "2025-08-22T05:23:46.473Z",
+      "status": "rejected"
     }
   ]
 }

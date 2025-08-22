@@ -57,10 +57,14 @@ const JobListings = ({ isHome = false }) => {
 
         let roleFilteredJobs;
         if (isEmployer()) {
-          roleFilteredJobs = data.filter((job) => job.employerId === user.id);
+          // roleFilteredJobs = data.filter((job) => job.employerId === user.id);
+          roleFilteredJobs = data.filter(
+            (job) => String(job.employerId) === String(user.id)
+          );
         } else {
           roleFilteredJobs = data;
         }
+        
 
         setJobs(roleFilteredJobs);
         setFilteredJobs(roleFilteredJobs);
@@ -248,7 +252,7 @@ const JobListings = ({ isHome = false }) => {
 
             {filteredJobs.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {filteredJobs.map((job) => (
+                  {filteredJobs.map((job) => (
                   <JobListing key={job.id} job={job} />
                 ))}
               </div>

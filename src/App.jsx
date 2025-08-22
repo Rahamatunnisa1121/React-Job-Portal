@@ -14,7 +14,7 @@ import AddJobPage from "./pages/AddJobPage";
 import EditJobPage from "./pages/EditJobPage";
 import Login from "./components/Login";
 import Signup from "./components/signup";
-import ProtectedRoute from "./components/ProtectedRoute";
+import MyApplications from "./pages/MyApplications";
 const App = () => {
   // Add New Job                                                                                                                    
   const addJob = async (newJob) => {
@@ -57,56 +57,31 @@ const App = () => {
 
         {/* Main app routes - wrapped with MainLayout */}
         <Route path="/" element={<MainLayout />}>
-          <Route
-            index
-            element={
-              <ProtectedRoute>
-                <HomePage />
-              </ProtectedRoute>
-            }
-          />
+          <Route index element={<HomePage />} />
 
-          <Route
-            path="/jobs"
-            element={
-              <ProtectedRoute>
-                <JobsPage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/jobs" element={<JobsPage />} />
 
           {/* Add Job - Only employers can access */}
           <Route
             path="/add-job"
-            element={
-              <ProtectedRoute allowedRoles={["employer"]}>
-                <AddJobPage addJobSubmit={addJob} />
-              </ProtectedRoute>
-            }
+            element={<AddJobPage addJobSubmit={addJob} />}
           />
 
           {/* Edit Job - Only employers can access */}
           <Route
             path="/edit-job/:id"
-            element={
-              <ProtectedRoute allowedRoles={["employer"]}>
-                <EditJobPage updateJobSubmit={updateJob} />
-              </ProtectedRoute>
-            }
+            element={<EditJobPage updateJobSubmit={updateJob} />}
             loader={jobLoader}
           />
-          
 
           {/* View Job - All authenticated users */}
           <Route
             path="/jobs/:id"
-            element={
-              <ProtectedRoute>
-                <JobPage deleteJob={deleteJob} />
-              </ProtectedRoute>
-            }
+            element={<JobPage deleteJob={deleteJob} />}
             loader={jobLoader}
           />
+
+          <Route path="/myapplications" element={<MyApplications />} />
 
           <Route path="*" element={<NotFoundPage />} />
         </Route>
