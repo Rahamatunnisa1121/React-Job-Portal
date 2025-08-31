@@ -304,6 +304,15 @@
       "applicantName": "Ruhi Shaik",
       "applicantEmail": "shaikruhi911@gmail.com",
       "appliedAt": "2025-08-22T17:03:43.254Z",
+      "status": "rejected"
+    },
+    {
+      "id": "57b6",
+      "jobId": "2",
+      "applicantId": "1",
+      "applicantName": "John Developer",
+      "applicantEmail": "john@dev.com",
+      "appliedAt": "2025-08-31T06:32:59.561Z",
       "status": "pending"
     }
   ],
