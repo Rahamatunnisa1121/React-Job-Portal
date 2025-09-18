@@ -4,7 +4,7 @@
       "id": "1",
       "name": "John Developer",
       "email": "john@dev.com",
-      "password": "123456",
+      "password": "",
       "role": "developer",
       "skills": [
         1,
@@ -20,14 +20,18 @@
         15,
         16,
         17,
-        20
-      ]
+        20,
+        "1758206221329"
+      ],
+      "profileImageUrl": "",
+      "introVideoUrl": ""
     },
     {
       "id": "2",
       "name": "Jane Employer",
       "email": "jane@company.com",
       "password": "123456",
+      "companyPhoto": "",
       "role": "employer"
     },
     {
@@ -396,6 +400,14 @@
     {
       "id": "20",
       "name": "TypeScript with React"
+    },
+    {
+      "id": "1758206221329",
+      "name": "dsa"
+    },
+    {
+      "id": "1758207911669",
+      "name": "tailwind"
     }
   ]
 }

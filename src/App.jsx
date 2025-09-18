@@ -15,6 +15,8 @@ import EditJobPage from "./pages/EditJobPage";
 import Login from "./components/Login";
 import Signup from "./components/signup";
 import MyApplications from "./pages/MyApplications";
+import Profile from "./components/Profile";
+import EmployerProfile from "./components/EmployerProfile";
 const App = () => {
   // Add New Job                                                                                                                    
   const addJob = async (newJob) => {
@@ -48,46 +50,40 @@ const App = () => {
     return;
   };
 
-  const router = createBrowserRouter(
-    createRoutesFromElements(
-      <>
-        {/* Login route - outside MainLayout */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <>
+      {/* Public routes (outside MainLayout) */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
 
-        {/* Main app routes - wrapped with MainLayout */}
-        <Route path="/" element={<MainLayout />}>
-          <Route index element={<HomePage />} />
+      {/* Protected/Main routes (with MainLayout wrapper) */}
+      <Route path="/" element={<MainLayout />}>
+        <Route index element={<HomePage />} />
+        <Route path="profile" element={<Profile />} />
+        <Route path="jobs" element={<JobsPage />} />
 
-          <Route path="/jobs" element={<JobsPage />} />
+        <Route path="add-job" element={<AddJobPage addJobSubmit={addJob} />} />
+        <Route
+          path="edit-job/:id"
+          element={<EditJobPage updateJobSubmit={updateJob} />}
+          loader={jobLoader}
+        />
+        <Route path="/employer/:id" element={<EmployerProfile />} />
+        <Route
+          path="jobs/:id"
+          element={<JobPage deleteJob={deleteJob} />}
+          loader={jobLoader}
+        />
 
-          {/* Add Job - Only employers can access */}
-          <Route
-            path="/add-job"
-            element={<AddJobPage addJobSubmit={addJob} />}
-          />
+        <Route path="myapplications" element={<MyApplications />} />
 
-          {/* Edit Job - Only employers can access */}
-          <Route
-            path="/edit-job/:id"
-            element={<EditJobPage updateJobSubmit={updateJob} />}
-            loader={jobLoader}
-          />
-
-          {/* View Job - All authenticated users */}
-          <Route
-            path="/jobs/:id"
-            element={<JobPage deleteJob={deleteJob} />}
-            loader={jobLoader}
-          />
-
-          <Route path="/myapplications" element={<MyApplications />} />
-
-          <Route path="*" element={<NotFoundPage />} />
-        </Route>
-      </>
-    )
-  );
+        {/* Catch-all */}
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </>
+  )
+);
 
   return (
     <AuthProvider>

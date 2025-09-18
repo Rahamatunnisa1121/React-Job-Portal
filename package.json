@@ -11,6 +11,7 @@
     "server": "json-server --watch src/database.json --port 8000"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.891.0",
     "lucide-react": "^0.539.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

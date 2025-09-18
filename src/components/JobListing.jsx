@@ -160,18 +160,20 @@ const JobListing = ({ job }) => {
 
             {/* Apply Button - Only for Developers */}
             {isDeveloper() && (
-              <button
-                onClick={handleApply}
-                disabled={isApplying || alreadyApplied}
-                className="h-[36px] bg-green-500 hover:bg-green-600 disabled:bg-green-300 text-white px-3 py-2 rounded-lg text-sm flex items-center justify-center gap-1 disabled:cursor-not-allowed"
-              >
-                <FaBriefcase className="text-lg" />
-                {alreadyApplied
-                  ? "Already Applied"
-                  : isApplying
-                  ? "Applying..."
-                  : "Apply Now"}
-              </button>
+              <>
+                <button
+                  onClick={handleApply}
+                  disabled={isApplying || alreadyApplied}
+                  className="h-[36px] bg-green-500 hover:bg-green-600 disabled:bg-green-300 text-white px-3 py-2 rounded-lg text-sm flex items-center justify-center gap-1 disabled:cursor-not-allowed"
+                >
+                  <FaBriefcase className="text-lg" />
+                  {alreadyApplied
+                    ? "Already Applied"
+                    : isApplying
+                    ? "Applying..."
+                    : "Apply Now"}
+                </button>
+              </>
             )}
 
             {/* Edit Button - Only for Job Owner (Employer) */}

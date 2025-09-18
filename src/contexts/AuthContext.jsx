@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 const AuthContext = createContext();
@@ -56,6 +55,25 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("currentUser");
   };
 
+  // ✅ ADD THIS FUNCTION - Update user data after profile changes
+  const updateUser = (updatedUserData) => {
+    try {
+      // Remove password if it exists (for security)
+      const userWithoutPassword = { ...updatedUserData };
+      delete userWithoutPassword.password;
+
+      // Update user state
+      setUser(userWithoutPassword);
+
+      // Update localStorage to persist the changes
+      localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword));
+
+      console.log("User updated successfully:", userWithoutPassword);
+    } catch (error) {
+      console.error("Error updating user data:", error);
+    }
+  };
+
   const isDeveloper = () => user?.role === USER_ROLES.DEVELOPER;
   const isEmployer = () => user?.role === USER_ROLES.EMPLOYER;
   const canEditJob = (job) => isEmployer() && job.employerId === user?.id;
@@ -67,6 +85,7 @@ export const AuthProvider = ({ children }) => {
         isLoading,
         login,
         logout,
+        updateUser, 
         isDeveloper,
         isEmployer,
         canEditJob,

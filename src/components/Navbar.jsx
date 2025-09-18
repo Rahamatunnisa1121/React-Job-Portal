@@ -51,7 +51,7 @@ const Navbar = () => {
                   )}
                   {isDeveloper() && (
                     <NavLink to="/myapplications" className={linkClass}>
-                     My applications
+                      My applications
                     </NavLink>
                   )}
                 </div>
@@ -66,7 +66,10 @@ const Navbar = () => {
                 {/* User welcome message */}
                 <div className="text-white text-sm">
                   <span className="hidden sm:inline">Welcome, </span>
-                  <span className="font-semibold">{user.name}</span>
+                  {/* <span className="font-semibold">{user.name}</span> */}
+                  <NavLink to="/profile" className={linkClass}>
+                    <span className="font-semibold">{user.name}</span>
+                  </NavLink>
                   <span className="ml-1 text-xs bg-indigo-500 px-2 py-1 rounded-full">
                     {user.role}
                   </span>
