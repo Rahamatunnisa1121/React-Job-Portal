@@ -106,9 +106,12 @@ const Profile = () => {
       });
 
       // Set preview URLs from existing data
-      if (user.profileImageUrl) {
+      if (user.role === "developer" && user.profileImageUrl) {
         setProfileImagePreview(user.profileImageUrl);
+      } else if (user.role === "employer" && user.companyPhoto) {
+        setProfileImagePreview(user.companyPhoto);
       }
+
       if (user.introVideoUrl) {
         setIntroVideoPreview(user.introVideoUrl);
       }
@@ -761,9 +764,16 @@ const Profile = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div className="relative w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center overflow-hidden">
-                  {user?.profileImageUrl || profileImagePreview ? (
+                  {(user?.role === "developer" &&
+                    (user?.profileImageUrl || profileImagePreview)) ||
+                  (user?.role === "employer" &&
+                    (user?.companyPhoto || profileImagePreview)) ? (
                     <img
-                      src={profileImagePreview || user?.profileImageUrl}
+                      src={
+                        user?.role === "developer"
+                          ? profileImagePreview || user?.profileImageUrl
+                          : profileImagePreview || user?.companyPhoto
+                      }
                       alt="Profile"
                       className="w-full h-full object-cover"
                     />
@@ -1329,7 +1339,9 @@ const Profile = () => {
               /* View Mode */
               <div className="space-y-6">
                 {/* Profile Image Display */}
-                {(user?.profileImageUrl || profileImagePreview) && (
+                {((user?.role === "developer" && user?.profileImageUrl) ||
+                  (user?.role === "employer" && user?.companyPhoto) ||
+                  profileImagePreview) && (
                   <div>
                     <h3 className="text-lg font-medium text-gray-900 mb-4">
                       {user?.role === "developer"
@@ -1338,7 +1350,11 @@ const Profile = () => {
                     </h3>
                     <div className="flex justify-center">
                       <img
-                        src={user?.profileImageUrl || profileImagePreview}
+                        src={
+                          user?.role === "developer"
+                            ? user?.profileImageUrl || profileImagePreview
+                            : user?.companyPhoto || profileImagePreview
+                        }
                         alt={
                           user?.role === "developer"
                             ? "Profile"
