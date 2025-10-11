@@ -4,7 +4,7 @@
       "id": "1",
       "name": "John Developer",
       "email": "john@dev.com",
-      "password": "",
+      "password": "123456",
       "role": "developer",
       "skills": [
         1,
@@ -23,16 +23,16 @@
         20,
         "1758206221329"
       ],
-      "profileImageUrl": "",
-      "introVideoUrl": ""
+      "profileImageUrl": "https://news-video-input.s3.ap-south-1.amazonaws.com/ruhi/profiles/1_profiles_1760162837318.jpg",
+      "introVideoUrl": "https://news-video-input.s3.ap-south-1.amazonaws.com/ruhi/videos/1_videos_1760162065667.mp4"
     },
     {
       "id": "2",
       "name": "Jane Employer",
       "email": "jane@company.com",
       "password": "123456",
-      "companyPhoto": "",
-      "role": "employer"
+      "role": "employer",
+      "companyPhoto": "https://news-video-input.s3.ap-south-1.amazonaws.com/ruhi/profiles/2_profiles_1760162746343.jpg"
     },
     {
       "id": "3",

@@ -41,7 +41,9 @@ const s3Client = new S3Client({
   maxAttempts: 1,
 });
 const BUCKET_NAME = import.meta.env.VITE_AWS_S3_BUCKET_NAME;
+// Updated S3 Base URL to match the structure: bucket-name.amazonaws.com
 const S3_BASE_URL = import.meta.env.VITE_AWS_S3_BASE_URL;
+const YOUR_NAME = import.meta.env.VITE_YOUR_NAME; // Your folder name
 
 const Profile = () => {
   const { user, isAuthenticated, updateUser } = useAuth();
@@ -66,6 +68,10 @@ const Profile = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
   const videoInputRef = useRef(null);
+  const resumeInputRef = useRef(null);
+  const [resume, setResume] = useState(null);
+  const [resumeFileName, setResumeFileName] = useState("");
+  const [isUploadingResume, setIsUploadingResume] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -174,7 +180,7 @@ const Profile = () => {
         },
         body: JSON.stringify({
           name: newSkillName.trim(),
-          id: Date.now().toString(), // Simple ID generation
+          id: Date.now().toString(),
         }),
       });
 
@@ -248,15 +254,16 @@ const Profile = () => {
     }
   };
 
-  // File upload utilities - AWS SDK v3 (browser-friendly)
-  // File upload utilities - AWS SDK v3 (browser-compatible)
+  // Updated File upload utilities - AWS SDK v3 with correct folder structure
   const uploadToS3 = async (file, folder) => {
     try {
-      // Create a meaningful filename with folder structure
+      // Get file extension
       const fileExtension = file.name.split(".").pop();
-      const fileName = `ruhi/jobs-app/${folder}/${
-        user.id
-      }_${folder}_${Date.now()}.${fileExtension}`;
+      const timestamp = Date.now();
+
+      // Create folder structure: YourName/FileType/filename
+      // Example: ruhi/profiles/123_profile_1234567890.jpg
+      const fileName = `${YOUR_NAME}/${folder}/${user.id}_${folder}_${timestamp}.${fileExtension}`;
 
       // Convert File to ArrayBuffer for browser compatibility
       const arrayBuffer = await file.arrayBuffer();
@@ -265,9 +272,9 @@ const Profile = () => {
       const command = new PutObjectCommand({
         Bucket: BUCKET_NAME,
         Key: fileName,
-        Body: uint8Array, // Use Uint8Array instead of File object
+        Body: uint8Array,
         ContentType: file.type,
-        ACL: "public-read",
+        // ACL removed - bucket uses bucket policy instead
       });
 
       // Simulate progress for better UX
@@ -282,9 +289,12 @@ const Profile = () => {
       setUploadProgress(100);
 
       // Construct the public URL
+      // Format: https://bucket-name.s3.region.amazonaws.com/YourName/FileType/filename
       const fileUrl = `${S3_BASE_URL}${fileName}`;
 
       console.log("File uploaded successfully:", fileUrl);
+      console.log(`S3 Structure: s3://${BUCKET_NAME}/${fileName}`);
+
       return fileUrl;
     } catch (error) {
       console.error("Error uploading to S3:", error);
@@ -303,7 +313,7 @@ const Profile = () => {
       });
 
       await s3Client.send(command);
-      console.log("File deleted successfully from S3");
+      console.log("File deleted successfully from S3:", key);
     } catch (error) {
       console.error("Error deleting file from S3:", error);
       // Don't throw error here as we don't want to block the user update
@@ -449,10 +459,10 @@ const Profile = () => {
     }));
   };
 
-const getSkillName = (skillId) => {
-  const skill = availableSkills.find((s) => String(s.id) === String(skillId));
-  return skill ? skill.name : "";
-};
+  const getSkillName = (skillId) => {
+    const skill = availableSkills.find((s) => String(s.id) === String(skillId));
+    return skill ? skill.name : "";
+  };
 
   const validateEmail = (email) => {
     const regex =
@@ -528,12 +538,11 @@ const getSkillName = (skillId) => {
         id: user.id,
         name: formData.name.trim(),
         email: formData.email.trim(),
-        password: formData.password,
         role: formData.role,
       };
 
       // Only include password if it's being changed
-      if (formData.password) {
+      if (formData.password && formData.password.trim()) {
         updateData.password = formData.password;
       }
 
@@ -549,7 +558,7 @@ const getSkillName = (skillId) => {
 
       // Update user via API
       const response = await fetch(`/api/users/${user.id}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
