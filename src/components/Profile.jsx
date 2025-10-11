@@ -82,6 +82,7 @@ const Profile = () => {
     skills: [],
     profileImageUrl: "",
     introVideoUrl: "",
+    resumeUrl: "",
   });
 
   // Redirect if not authenticated
@@ -101,6 +102,7 @@ const Profile = () => {
         skills: user.skills || [],
         profileImageUrl: user.profileImageUrl || "",
         introVideoUrl: user.introVideoUrl || "",
+        resumeUrl: user.resumeUrl || "",
       });
 
       // Set preview URLs from existing data
@@ -109,6 +111,9 @@ const Profile = () => {
       }
       if (user.introVideoUrl) {
         setIntroVideoPreview(user.introVideoUrl);
+      }
+      if (user.resumeUrl) {
+        setResumeFileName(user.resumeUrl.split("/").pop());
       }
     }
 
@@ -372,6 +377,37 @@ const Profile = () => {
     reader.readAsDataURL(file);
   };
 
+  const handleResumeSelect = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type (PDF, DOC, DOCX)
+    const allowedTypes = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      setMessage({
+        type: "error",
+        text: "Please select a valid resume file (PDF, DOC, DOCX)",
+      });
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setMessage({
+        type: "error",
+        text: "Resume size must be less than 10MB",
+      });
+      return;
+    }
+
+    setResume(file);
+    setResumeFileName(file.name);
+  };
+
   const uploadProfileImage = async () => {
     if (!profileImage) return null;
 
@@ -418,6 +454,29 @@ const Profile = () => {
     }
   };
 
+  const uploadResume = async () => {
+    if (!resume) return null;
+
+    setIsUploadingResume(true);
+    setUploadProgress(0);
+
+    try {
+      const resumeUrl = await uploadToS3(resume, "documents");
+      setMessage({
+        type: "success",
+        text: "Resume uploaded successfully!",
+      });
+      return resumeUrl;
+    } catch (error) {
+      console.error("Error uploading resume:", error);
+      setMessage({ type: "error", text: "Failed to upload resume" });
+      throw error;
+    } finally {
+      setIsUploadingResume(false);
+      setUploadProgress(0);
+    }
+  };
+
   const removeProfileImage = () => {
     setProfileImage(null);
     setProfileImagePreview("");
@@ -428,6 +487,12 @@ const Profile = () => {
     setIntroVideo(null);
     setIntroVideoPreview("");
     setFormData((prev) => ({ ...prev, introVideoUrl: "" }));
+  };
+
+  const removeResume = () => {
+    setResume(null);
+    setResumeFileName("");
+    setFormData((prev) => ({ ...prev, resumeUrl: "" }));
   };
 
   const handleInputChange = (e) => {
@@ -512,6 +577,7 @@ const Profile = () => {
       // First, upload files to S3 if they exist
       let profileImageUrl = formData.profileImageUrl;
       let introVideoUrl = formData.introVideoUrl;
+      let resumeUrl = formData.resumeUrl;
 
       // Upload profile image if a new one was selected
       if (profileImage) {
@@ -533,6 +599,16 @@ const Profile = () => {
         }
       }
 
+      // Upload resume if a new one was selected (only for developers)
+      if (resume && formData.role === "developer") {
+        try {
+          resumeUrl = await uploadResume();
+        } catch (error) {
+          setIsSaving(false);
+          return; // Stop execution if resume upload fails
+        }
+      }
+
       // Prepare update data
       const updateData = {
         id: user.id,
@@ -551,6 +627,7 @@ const Profile = () => {
         updateData.skills = formData.skills;
         updateData.profileImageUrl = profileImageUrl;
         updateData.introVideoUrl = introVideoUrl;
+        updateData.resumeUrl = resumeUrl;
       }
       if (formData.role === "employer") {
         updateData.companyPhoto = profileImageUrl;
@@ -579,6 +656,7 @@ const Profile = () => {
         ...prev,
         profileImageUrl: profileImageUrl,
         introVideoUrl: introVideoUrl,
+        resumeUrl: resumeUrl,
         password: "",
         confirmPassword: "",
       }));
@@ -586,10 +664,14 @@ const Profile = () => {
       // Clear file states since they're now uploaded
       setProfileImage(null);
       setIntroVideo(null);
+      setResume(null);
 
       // Update preview URLs to use the S3 URLs
       setProfileImagePreview(profileImageUrl || "");
       setIntroVideoPreview(introVideoUrl || "");
+      if (resumeUrl) {
+        setResumeFileName(resumeUrl.split("/").pop());
+      }
 
       setMessage({ type: "success", text: "Profile updated successfully!" });
       setIsEditing(false);
@@ -615,13 +697,16 @@ const Profile = () => {
       skills: user.skills || [],
       profileImageUrl: user.profileImageUrl || "",
       introVideoUrl: user.introVideoUrl || "",
+      resumeUrl: user.resumeUrl || "",
     });
 
     // Reset file states
     setProfileImage(null);
     setIntroVideo(null);
+    setResume(null);
     setProfileImagePreview(user.profileImageUrl || "");
     setIntroVideoPreview(user.introVideoUrl || "");
+    setResumeFileName(user.resumeUrl ? user.resumeUrl.split("/").pop() : "");
 
     setIsEditing(false);
     setMessage({ type: "", text: "" });
@@ -852,6 +937,96 @@ const Profile = () => {
                           💡 <strong>Tip:</strong> Record a short video (30-60
                           seconds) introducing yourself, your experience, and
                           what makes you unique as a developer.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Resume Upload (only for developers) */}
+                {formData.role === "developer" && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Resume / CV
+                    </label>
+                    <div className="space-y-3">
+                      {(resumeFileName || formData.resumeUrl) && (
+                        <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                          <div className="flex items-center gap-3 flex-1">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <Upload className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {resumeFileName ||
+                                  formData.resumeUrl.split("/").pop()}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {resume
+                                  ? `${(resume.size / 1024).toFixed(0)} KB`
+                                  : "Previously uploaded"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {formData.resumeUrl && !resume && (
+                              <a
+                                href={formData.resumeUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="View Resume"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </a>
+                            )}
+                            <button
+                              type="button"
+                              onClick={removeResume}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Remove Resume"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center space-x-4">
+                        <div
+                          className={`w-24 h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 ${
+                            resumeFileName ? "opacity-50" : ""
+                          }`}
+                        >
+                          <Upload className="w-6 h-6 text-gray-400" />
+                        </div>
+                        <div className="flex-1">
+                          <input
+                            ref={resumeInputRef}
+                            type="file"
+                            accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            onChange={handleResumeSelect}
+                            className="hidden"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => resumeInputRef.current?.click()}
+                            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors duration-200"
+                          >
+                            <Upload className="w-4 h-4" />
+                            {resumeFileName ? "Change Resume" : "Upload Resume"}
+                          </button>
+                          <p className="text-xs text-gray-500 mt-1">
+                            PDF, DOC, DOCX up to 10MB
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                        <p className="text-sm text-green-700">
+                          📄 <strong>Pro Tip:</strong> Keep your resume updated
+                          and highlight your most relevant skills and
+                          experience. Use a clean, professional format.
                         </p>
                       </div>
                     </div>
@@ -1103,19 +1278,30 @@ const Profile = () => {
                 <div className="flex gap-3 pt-6 border-t">
                   <button
                     onClick={handleSave}
-                    disabled={isSaving || isUploadingImage || isUploadingVideo}
+                    disabled={
+                      isSaving ||
+                      isUploadingImage ||
+                      isUploadingVideo ||
+                      isUploadingResume
+                    }
                     className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isSaving || isUploadingImage || isUploadingVideo ? (
+                    {isSaving ||
+                    isUploadingImage ||
+                    isUploadingVideo ||
+                    isUploadingResume ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
                         {isUploadingImage &&
                           `Uploading Image... ${uploadProgress}%`}
                         {isUploadingVideo &&
                           `Uploading Video... ${uploadProgress}%`}
+                        {isUploadingResume &&
+                          `Uploading Resume... ${uploadProgress}%`}
                         {isSaving &&
                           !isUploadingImage &&
                           !isUploadingVideo &&
+                          !isUploadingResume &&
                           "Saving..."}
                       </>
                     ) : (
@@ -1127,7 +1313,12 @@ const Profile = () => {
                   </button>
                   <button
                     onClick={handleCancel}
-                    disabled={isSaving || isUploadingImage || isUploadingVideo}
+                    disabled={
+                      isSaving ||
+                      isUploadingImage ||
+                      isUploadingVideo ||
+                      isUploadingResume
+                    }
                     className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-all duration-200 disabled:opacity-50"
                   >
                     Cancel
@@ -1176,6 +1367,42 @@ const Profile = () => {
                       </div>
                     </div>
                   )}
+
+                {/* Resume Display (only for developers) */}
+                {user?.role === "developer" && user?.resumeUrl && (
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                      <Upload className="h-5 w-5" />
+                      Resume / CV
+                    </h3>
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <Upload className="w-6 h-6 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {user.resumeUrl.split("/").pop()}
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              Resume document uploaded
+                            </p>
+                          </div>
+                        </div>
+                        <a
+                          href={user.resumeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors duration-200"
+                        >
+                          <Eye className="w-4 h-4" />
+                          View Resume
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Basic Information */}
                 <div>
