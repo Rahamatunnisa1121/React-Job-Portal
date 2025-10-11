@@ -3,7 +3,7 @@ import { FaArrowLeft, FaMapMarker, FaBriefcase } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { useAuth } from "../contexts/AuthContext";
 import { useState, useEffect } from "react";
-import { Video } from "lucide-react";
+import { Video, FileText } from "lucide-react";
 import defaultProfile from "../assets/images/profilephoto.jpg";
 
 const JobPage = ({ deleteJob }) => {
@@ -40,7 +40,7 @@ const JobPage = ({ deleteJob }) => {
     }
   }, [job.id, user.id, isDeveloper]);
 
-  // ✅ Apply to job
+  // ✅ Apply to job - NOW INCLUDES RESUME
   const handleApply = async (e) => {
     e.preventDefault();
     setIsApplying(true);
@@ -53,6 +53,7 @@ const JobPage = ({ deleteJob }) => {
       appliedAt: new Date().toISOString(),
       profile: user.profileImageUrl,
       video: user.introVideoUrl,
+      resume: user.resumeUrl, // ✅ ADDED RESUME
       status: "pending",
     };
 
@@ -78,11 +79,13 @@ const JobPage = ({ deleteJob }) => {
       setIsApplying(false);
     }
   };
+
   const handleViewCompany = () => {
     if (job?.employerId) {
       navigate(`/employer/${job.employerId}`);
     }
   };
+
   // ✅ Approve / Reject
   const handleApprove = async (applicationId) => {
     try {
@@ -128,7 +131,7 @@ const JobPage = ({ deleteJob }) => {
     }
   };
 
-  // ✅ Load applications
+  // ✅ Load applications - NOW INCLUDES RESUME
   const handleViewApplications = async () => {
     try {
       setLoadingApplications(true);
@@ -160,7 +163,7 @@ const JobPage = ({ deleteJob }) => {
         return map;
       }, {});
 
-      // ✅ Merge missing profile + video from user
+      // ✅ Merge missing profile + video + RESUME from user
       const applicationsWithSkills = filteredApplications.map((application) => {
         const applicant = usersMap[application.applicantId];
 
@@ -170,6 +173,7 @@ const JobPage = ({ deleteJob }) => {
             applicantSkills: [],
             profile: "",
             video: "",
+            resume: "", // ✅ ADDED
           };
         }
 
@@ -183,6 +187,7 @@ const JobPage = ({ deleteJob }) => {
           applicantSkills: applicantSkillNames,
           profile: application.profile || applicant.profileImageUrl,
           video: application.video || applicant.introVideoUrl,
+          resume: application.resume || applicant.resumeUrl, // ✅ ADDED
         };
       });
 
@@ -248,25 +253,6 @@ const JobPage = ({ deleteJob }) => {
               {/* ✅ Apply / View Applications */}
               {isDeveloper() && (
                 <>
-                  {/* <button
-                    onClick={handleApply}
-                    disabled={isApplying || alreadyApplied}
-                    className="mt-6 w-full max-w-sm px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white font-semibold rounded-2xl shadow-md hover:shadow-lg text-base flex items-center justify-center gap-2 transition-all duration-300 disabled:cursor-not-allowed"
-                  >
-                    <FaBriefcase className="text-lg" />
-                    {alreadyApplied
-                      ? "Already Applied"
-                      : isApplying
-                      ? "Applying..."
-                      : "Apply Now"}
-                  </button>
-                  <button
-                    onClick={handleApply}
-                    disabled={isApplying || alreadyApplied}
-                    className="h-[36px] bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white px-3 py-2 rounded-lg text-sm flex items-center justify-center gap-1 disabled:cursor-not-allowed"
-                  >
-                    View Company
-                  </button> */}
                   <div className="mt-6 flex flex-wrap gap-3">
                     {/* Apply Now Button */}
                     <button
@@ -304,11 +290,11 @@ const JobPage = ({ deleteJob }) => {
                 </button>
               )}
 
-              {/* ✅ Applications list */}
+              {/* ✅ Applications list - NOW WITH RESUME BUTTON */}
               {showApplications && (
                 <div className="bg-white p-8 rounded-2xl shadow-lg mt-8 border border-gray-100">
                   <h3 className="text-indigo-700 text-xl font-semibold mb-6 flex items-center">
-                    Applications
+                    Applications ({applications.length})
                   </h3>
                   {applications.length > 0 ? (
                     <ul className="space-y-5">
@@ -323,7 +309,7 @@ const JobPage = ({ deleteJob }) => {
                               <img
                                 src={app.profile || defaultProfile}
                                 alt={app.applicantName}
-                                className="w-14 h-14 rounded-full object-cover border"
+                                className="w-14 h-14 rounded-full object-cover border-2 border-gray-200"
                               />
                               <div>
                                 <p className="text-lg font-semibold text-gray-800">
@@ -344,7 +330,7 @@ const JobPage = ({ deleteJob }) => {
                                         ? "text-green-600 font-semibold"
                                         : app.status === "rejected"
                                         ? "text-red-600 font-semibold"
-                                        : "text-yellow-600"
+                                        : "text-yellow-600 font-semibold"
                                     }
                                   >
                                     {app.status}
@@ -352,7 +338,7 @@ const JobPage = ({ deleteJob }) => {
                                 </p>
 
                                 {app.applicantSkills?.length > 0 && (
-                                  <div className="mb-4">
+                                  <div className="mt-3">
                                     <h4 className="text-sm font-medium text-gray-700 mb-2">
                                       Skills:
                                     </h4>
@@ -373,20 +359,42 @@ const JobPage = ({ deleteJob }) => {
                               </div>
                             </div>
 
-                            {/* ✅ Right section */}
+                            {/* ✅ Right section - Media & Actions */}
                             <div className="flex flex-col items-end gap-3">
-                              {app.video && (
-                                <a
-                                  href={app.video}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800"
-                                  title="View Video"
-                                >
-                                  <Video className="w-6 h-6" />
-                                </a>
-                              )}
+                              {/* ✅ Media buttons - VIDEO & RESUME */}
+                              <div className="flex gap-2">
+                                {app.video && (
+                                  <a
+                                    href={app.video}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 px-3 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg transition-all shadow-sm hover:shadow-md"
+                                    title="View Introduction Video"
+                                  >
+                                    <Video className="w-4 h-4" />
+                                    <span className="text-sm font-medium">
+                                      Video
+                                    </span>
+                                  </a>
+                                )}
 
+                                {app.resume && (
+                                  <a
+                                    href={app.resume}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 px-3 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-all shadow-sm hover:shadow-md"
+                                    title="View Resume/CV"
+                                  >
+                                    <FileText className="w-4 h-4" />
+                                    <span className="text-sm font-medium">
+                                      Resume
+                                    </span>
+                                  </a>
+                                )}
+                              </div>
+
+                              {/* Action buttons */}
                               {app.status === "pending" && (
                                 <div className="flex gap-2 mt-2">
                                   <button
@@ -409,9 +417,11 @@ const JobPage = ({ deleteJob }) => {
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-gray-500 text-sm">
-                      No applications yet.
-                    </p>
+                    <div className="text-center py-8 bg-gray-50 rounded-lg">
+                      <p className="text-gray-500 text-sm">
+                        No applications yet.
+                      </p>
+                    </div>
                   )}
                 </div>
               )}
