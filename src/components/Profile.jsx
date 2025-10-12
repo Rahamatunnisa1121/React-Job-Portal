@@ -28,7 +28,10 @@ import {
   Image,
   Trash2,
   Play,
+  FileText,
 } from "lucide-react";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 
 // AWS SDK v3 Configuration using environment variables
 const s3Client = new S3Client({
@@ -41,9 +44,8 @@ const s3Client = new S3Client({
   maxAttempts: 1,
 });
 const BUCKET_NAME = import.meta.env.VITE_AWS_S3_BUCKET_NAME;
-// Updated S3 Base URL to match the structure: bucket-name.amazonaws.com
 const S3_BASE_URL = import.meta.env.VITE_AWS_S3_BASE_URL;
-const YOUR_NAME = import.meta.env.VITE_YOUR_NAME; // Your folder name
+const YOUR_NAME = import.meta.env.VITE_YOUR_NAME;
 
 const Profile = () => {
   const { user, isAuthenticated, updateUser } = useAuth();
@@ -83,14 +85,13 @@ const Profile = () => {
     profileImageUrl: "",
     introVideoUrl: "",
     resumeUrl: "",
+    aboutMe: "",
   });
 
-  // Redirect if not authenticated
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  // Load user data and skills on component mount
   useEffect(() => {
     if (user) {
       setFormData({
@@ -103,9 +104,9 @@ const Profile = () => {
         profileImageUrl: user.profileImageUrl || "",
         introVideoUrl: user.introVideoUrl || "",
         resumeUrl: user.resumeUrl || "",
+        aboutMe: user.aboutMe || "",
       });
 
-      // Set preview URLs from existing data
       if (user.role === "developer" && user.profileImageUrl) {
         setProfileImagePreview(user.profileImageUrl);
       } else if (user.role === "employer" && user.companyPhoto) {
@@ -131,9 +132,7 @@ const Profile = () => {
     setSkillsLoading(true);
     try {
       const response = await fetch("/api/skills");
-      if (!response.ok) {
-        throw new Error("Failed to fetch skills");
-      }
+      if (!response.ok) throw new Error("Failed to fetch skills");
       const skills = await response.json();
       setAvailableSkills(skills);
     } catch (error) {
@@ -148,11 +147,8 @@ const Profile = () => {
     setJobsLoading(true);
     try {
       const response = await fetch("/api/jobs");
-      if (!response.ok) {
-        throw new Error("Failed to fetch jobs");
-      }
+      if (!response.ok) throw new Error("Failed to fetch jobs");
       const jobs = await response.json();
-      // Count jobs posted by this employer
       const employerJobs = jobs.filter((job) => job.employerId === user.id);
       setJobsCount(employerJobs.length);
     } catch (error) {
@@ -169,7 +165,6 @@ const Profile = () => {
       return;
     }
 
-    // Check if skill already exists
     const existingSkill = availableSkills.find(
       (skill) => skill.name.toLowerCase() === newSkillName.trim().toLowerCase()
     );
@@ -183,25 +178,17 @@ const Profile = () => {
     try {
       const response = await fetch("/api/skills", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: newSkillName.trim(),
           id: Date.now().toString(),
         }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to add skill");
-      }
-
+      if (!response.ok) throw new Error("Failed to add skill");
       const newSkill = await response.json();
 
-      // Add to available skills list
       setAvailableSkills((prev) => [...prev, newSkill]);
-
-      // Automatically select the new skill for the user
       setFormData((prev) => ({
         ...prev,
         skills: [...prev.skills, newSkill.id],
@@ -236,17 +223,11 @@ const Profile = () => {
       const response = await fetch(`/api/skills/${skillId}`, {
         method: "DELETE",
       });
+      if (!response.ok) throw new Error("Failed to delete skill");
 
-      if (!response.ok) {
-        throw new Error("Failed to delete skill");
-      }
-
-      // Remove from available skills
       setAvailableSkills((prev) =>
         prev.filter((skill) => skill.id !== skillId)
       );
-
-      // Remove from user's selected skills if it was selected
       setFormData((prev) => ({
         ...prev,
         skills: prev.skills.filter((id) => id !== skillId),
@@ -262,18 +243,12 @@ const Profile = () => {
     }
   };
 
-  // Updated File upload utilities - AWS SDK v3 with correct folder structure
   const uploadToS3 = async (file, folder) => {
     try {
-      // Get file extension
       const fileExtension = file.name.split(".").pop();
       const timestamp = Date.now();
-
-      // Create folder structure: YourName/FileType/filename
-      // Example: ruhi/profiles/123_profile_1234567890.jpg
       const fileName = `${YOUR_NAME}/${folder}/${user.id}_${folder}_${timestamp}.${fileExtension}`;
 
-      // Convert File to ArrayBuffer for browser compatibility
       const arrayBuffer = await file.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
 
@@ -282,27 +257,20 @@ const Profile = () => {
         Key: fileName,
         Body: uint8Array,
         ContentType: file.type,
-        // ACL removed - bucket uses bucket policy instead
       });
 
-      // Simulate progress for better UX
       setUploadProgress(25);
       await new Promise((resolve) => setTimeout(resolve, 500));
       setUploadProgress(50);
 
-      const result = await s3Client.send(command);
+      await s3Client.send(command);
 
       setUploadProgress(75);
       await new Promise((resolve) => setTimeout(resolve, 300));
       setUploadProgress(100);
 
-      // Construct the public URL
-      // Format: https://bucket-name.s3.region.amazonaws.com/YourName/FileType/filename
       const fileUrl = `${S3_BASE_URL}${fileName}`;
-
       console.log("File uploaded successfully:", fileUrl);
-      console.log(`S3 Structure: s3://${BUCKET_NAME}/${fileName}`);
-
       return fileUrl;
     } catch (error) {
       console.error("Error uploading to S3:", error);
@@ -312,19 +280,15 @@ const Profile = () => {
 
   const deleteFromS3 = async (fileUrl) => {
     try {
-      // Extract key from the full URL
       const key = fileUrl.replace(S3_BASE_URL, "");
-
       const command = new DeleteObjectCommand({
         Bucket: BUCKET_NAME,
         Key: key,
       });
-
       await s3Client.send(command);
       console.log("File deleted successfully from S3:", key);
     } catch (error) {
       console.error("Error deleting file from S3:", error);
-      // Don't throw error here as we don't want to block the user update
     }
   };
 
@@ -332,25 +296,19 @@ const Profile = () => {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith("image/")) {
       setMessage({ type: "error", text: "Please select a valid image file" });
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setMessage({ type: "error", text: "Image size must be less than 5MB" });
       return;
     }
 
     setProfileImage(file);
-
-    // Create preview
     const reader = new FileReader();
-    reader.onload = (e) => {
-      setProfileImagePreview(e.target.result);
-    };
+    reader.onload = (e) => setProfileImagePreview(e.target.result);
     reader.readAsDataURL(file);
   };
 
@@ -358,25 +316,19 @@ const Profile = () => {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith("video/")) {
       setMessage({ type: "error", text: "Please select a valid video file" });
       return;
     }
 
-    // Validate file size (max 50MB)
     if (file.size > 50 * 1024 * 1024) {
       setMessage({ type: "error", text: "Video size must be less than 50MB" });
       return;
     }
 
     setIntroVideo(file);
-
-    // Create preview
     const reader = new FileReader();
-    reader.onload = (e) => {
-      setIntroVideoPreview(e.target.result);
-    };
+    reader.onload = (e) => setIntroVideoPreview(e.target.result);
     reader.readAsDataURL(file);
   };
 
@@ -384,7 +336,6 @@ const Profile = () => {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Validate file type (PDF, DOC, DOCX)
     const allowedTypes = [
       "application/pdf",
       "application/msword",
@@ -398,12 +349,8 @@ const Profile = () => {
       return;
     }
 
-    // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
-      setMessage({
-        type: "error",
-        text: "Resume size must be less than 10MB",
-      });
+      setMessage({ type: "error", text: "Resume size must be less than 10MB" });
       return;
     }
 
@@ -413,10 +360,8 @@ const Profile = () => {
 
   const uploadProfileImage = async () => {
     if (!profileImage) return null;
-
     setIsUploadingImage(true);
     setUploadProgress(0);
-
     try {
       const imageUrl = await uploadToS3(profileImage, "profiles");
       setMessage({
@@ -436,10 +381,8 @@ const Profile = () => {
 
   const uploadIntroVideo = async () => {
     if (!introVideo) return null;
-
     setIsUploadingVideo(true);
     setUploadProgress(0);
-
     try {
       const videoUrl = await uploadToS3(introVideo, "videos");
       setMessage({
@@ -459,16 +402,11 @@ const Profile = () => {
 
   const uploadResume = async () => {
     if (!resume) return null;
-
     setIsUploadingResume(true);
     setUploadProgress(0);
-
     try {
       const resumeUrl = await uploadToS3(resume, "documents");
-      setMessage({
-        type: "success",
-        text: "Resume uploaded successfully!",
-      });
+      setMessage({ type: "success", text: "Resume uploaded successfully!" });
       return resumeUrl;
     } catch (error) {
       console.error("Error uploading resume:", error);
@@ -500,15 +438,8 @@ const Profile = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    // Clear messages when user makes changes
-    if (message.text) {
-      setMessage({ type: "", text: "" });
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (message.text) setMessage({ type: "", text: "" });
   };
 
   const handleSkillToggle = (skillId) => {
@@ -539,24 +470,16 @@ const Profile = () => {
   };
 
   const validateForm = () => {
-    if (!formData.name.trim()) {
-      return "Name is required";
-    }
-    if (!formData.email.trim()) {
-      return "Email is required";
-    }
-    if (!validateEmail(formData.email.trim())) {
+    if (!formData.name.trim()) return "Name is required";
+    if (!formData.email.trim()) return "Email is required";
+    if (!validateEmail(formData.email.trim()))
       return "Please enter a valid email address";
-    }
 
-    // Only validate password if it's being changed
     if (formData.password) {
-      if (formData.password.length < 6) {
+      if (formData.password.length < 6)
         return "Password must be at least 6 characters long";
-      }
-      if (formData.password !== formData.confirmPassword) {
+      if (formData.password !== formData.confirmPassword)
         return "Passwords do not match";
-      }
     }
 
     if (formData.role === "developer" && formData.skills.length === 0) {
@@ -577,42 +500,37 @@ const Profile = () => {
     setMessage({ type: "", text: "" });
 
     try {
-      // First, upload files to S3 if they exist
       let profileImageUrl = formData.profileImageUrl;
       let introVideoUrl = formData.introVideoUrl;
       let resumeUrl = formData.resumeUrl;
 
-      // Upload profile image if a new one was selected
       if (profileImage) {
         try {
           profileImageUrl = await uploadProfileImage();
         } catch (error) {
           setIsSaving(false);
-          return; // Stop execution if image upload fails
+          return;
         }
       }
 
-      // Upload intro video if a new one was selected (only for developers)
       if (introVideo && formData.role === "developer") {
         try {
           introVideoUrl = await uploadIntroVideo();
         } catch (error) {
           setIsSaving(false);
-          return; // Stop execution if video upload fails
+          return;
         }
       }
 
-      // Upload resume if a new one was selected (only for developers)
       if (resume && formData.role === "developer") {
         try {
           resumeUrl = await uploadResume();
         } catch (error) {
           setIsSaving(false);
-          return; // Stop execution if resume upload fails
+          return;
         }
       }
 
-      // Prepare update data
       const updateData = {
         id: user.id,
         name: formData.name.trim(),
@@ -620,61 +538,50 @@ const Profile = () => {
         role: formData.role,
       };
 
-      // Only include password if it's being changed
       if (formData.password && formData.password.trim()) {
         updateData.password = formData.password;
       }
 
-      // Include role-specific data
       if (formData.role === "developer") {
         updateData.skills = formData.skills;
         updateData.profileImageUrl = profileImageUrl;
         updateData.introVideoUrl = introVideoUrl;
         updateData.resumeUrl = resumeUrl;
+        updateData.aboutMe = formData.aboutMe;
       }
       if (formData.role === "employer") {
         updateData.companyPhoto = profileImageUrl;
+        updateData.aboutMe = formData.aboutMe;
       }
 
-      // Update user via API
       const response = await fetch(`/api/users/${user.id}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updateData),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to update profile");
-      }
-
+      if (!response.ok) throw new Error("Failed to update profile");
       const updatedUser = await response.json();
 
-      // Update user in auth context
       updateUser(updatedUser);
 
-      // Update form data with the new URLs
       setFormData((prev) => ({
         ...prev,
         profileImageUrl: profileImageUrl,
         introVideoUrl: introVideoUrl,
         resumeUrl: resumeUrl,
+        aboutMe: formData.aboutMe,
         password: "",
         confirmPassword: "",
       }));
 
-      // Clear file states since they're now uploaded
       setProfileImage(null);
       setIntroVideo(null);
       setResume(null);
 
-      // Update preview URLs to use the S3 URLs
       setProfileImagePreview(profileImageUrl || "");
       setIntroVideoPreview(introVideoUrl || "");
-      if (resumeUrl) {
-        setResumeFileName(resumeUrl.split("/").pop());
-      }
+      if (resumeUrl) setResumeFileName(resumeUrl.split("/").pop());
 
       setMessage({ type: "success", text: "Profile updated successfully!" });
       setIsEditing(false);
@@ -690,7 +597,6 @@ const Profile = () => {
   };
 
   const handleCancel = () => {
-    // Reset form data to original user data
     setFormData({
       name: user.name || "",
       email: user.email || "",
@@ -701,9 +607,9 @@ const Profile = () => {
       profileImageUrl: user.profileImageUrl || "",
       introVideoUrl: user.introVideoUrl || "",
       resumeUrl: user.resumeUrl || "",
+      aboutMe: user.aboutMe || "",
     });
 
-    // Reset file states
     setProfileImage(null);
     setIntroVideo(null);
     setResume(null);
@@ -726,7 +632,6 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-8 px-4">
       <div className="max-w-2xl mx-auto">
-        {/* Header */}
         <div className="text-center mb-8">
           <div
             className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 shadow-lg ${
@@ -751,9 +656,7 @@ const Profile = () => {
           </p>
         </div>
 
-        {/* Profile Card */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-          {/* Profile Header */}
           <div
             className={`px-8 py-6 ${
               user?.role === "developer"
@@ -804,9 +707,7 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* Profile Content */}
           <div className="p-8">
-            {/* Success/Error Messages */}
             {message.text && (
               <div
                 className={`flex items-center gap-2 p-3 mb-6 rounded-lg ${
@@ -825,9 +726,7 @@ const Profile = () => {
             )}
 
             {isEditing ? (
-              /* Edit Mode */
               <div className="space-y-6">
-                {/* Profile Image/Logo Upload */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {formData.role === "developer"
@@ -888,7 +787,6 @@ const Profile = () => {
                   </div>
                 </div>
 
-                {/* Intro Video Upload (only for developers) */}
                 {formData.role === "developer" && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -953,7 +851,6 @@ const Profile = () => {
                   </div>
                 )}
 
-                {/* Resume Upload (only for developers) */}
                 {formData.role === "developer" && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1043,7 +940,68 @@ const Profile = () => {
                   </div>
                 )}
 
-                {/* Name Field */}
+                {/* About Me Section with Rich Text Editor */}
+                <div className="space-y-4">
+                  <div className="border-t pt-4">
+                    <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      About Me
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-3">
+                      {formData.role === "developer"
+                        ? "Tell employers about yourself, your experience, and what you're looking for"
+                        : "Describe your company, culture, and what makes it a great place to work"}
+                    </p>
+                  </div>
+
+                  <div className="border border-gray-300 rounded-lg overflow-hidden">
+                    <ReactQuill
+                      theme="snow"
+                      value={formData.aboutMe}
+                      onChange={(content) =>
+                        setFormData((prev) => ({ ...prev, aboutMe: content }))
+                      }
+                      modules={{
+                        toolbar: [
+                          [{ header: [1, 2, 3, false] }],
+                          ["bold", "italic", "underline", "strike"],
+                          [{ list: "ordered" }, { list: "bullet" }],
+                          [{ align: [] }],
+                          ["link", "image"],
+                          ["clean"],
+                        ],
+                      }}
+                      formats={[
+                        "header",
+                        "bold",
+                        "italic",
+                        "underline",
+                        "strike",
+                        "list",
+                        "bullet",
+                        "align",
+                        "link",
+                        "image",
+                      ]}
+                      placeholder={
+                        formData.role === "developer"
+                          ? "Share your story, experience, and career goals..."
+                          : "Tell developers about your company, team, and opportunities..."
+                      }
+                      className="bg-white"
+                      style={{ minHeight: "200px" }}
+                    />
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-sm text-blue-700">
+                      💡 <strong>Tip:</strong> A compelling "About Me" section
+                      can help you stand out. Be authentic and highlight what
+                      makes you unique!
+                    </p>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Full Name
@@ -1063,7 +1021,6 @@ const Profile = () => {
                   </div>
                 </div>
 
-                {/* Email Field */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Email Address
@@ -1083,7 +1040,6 @@ const Profile = () => {
                   </div>
                 </div>
 
-                {/* Password Section */}
                 <div className="space-y-4">
                   <div className="border-t pt-4">
                     <h3 className="text-lg font-medium text-gray-900 mb-4">
@@ -1094,7 +1050,6 @@ const Profile = () => {
                     </p>
                   </div>
 
-                  {/* New Password */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       New Password
@@ -1125,7 +1080,6 @@ const Profile = () => {
                     </div>
                   </div>
 
-                  {/* Confirm Password */}
                   {formData.password && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1161,7 +1115,6 @@ const Profile = () => {
                   )}
                 </div>
 
-                {/* Skills Section (only for developers) */}
                 {formData.role === "developer" && (
                   <div className="space-y-4">
                     <div className="border-t pt-4">
@@ -1171,7 +1124,6 @@ const Profile = () => {
                       </h3>
                     </div>
 
-                    {/* Add New Skill */}
                     <div className="bg-gray-50 rounded-lg p-4">
                       <h4 className="text-sm font-medium text-gray-700 mb-3">
                         Add New Skill
@@ -1202,7 +1154,6 @@ const Profile = () => {
                       </div>
                     </div>
 
-                    {/* Selected Skills Display */}
                     {formData.skills.length > 0 && (
                       <div className="mb-4">
                         <div className="text-sm text-gray-600 mb-2">
@@ -1228,7 +1179,6 @@ const Profile = () => {
                       </div>
                     )}
 
-                    {/* Skills Selection */}
                     <div className="border border-gray-300 rounded-lg p-4 max-h-48 overflow-y-auto">
                       <div className="flex justify-between items-center mb-3">
                         <h4 className="text-sm font-medium text-gray-700">
@@ -1284,7 +1234,6 @@ const Profile = () => {
                   </div>
                 )}
 
-                {/* Action Buttons */}
                 <div className="flex gap-3 pt-6 border-t">
                   <button
                     onClick={handleSave}
@@ -1336,9 +1285,7 @@ const Profile = () => {
                 </div>
               </div>
             ) : (
-              /* View Mode */
               <div className="space-y-6">
-                {/* Profile Image Display */}
                 {((user?.role === "developer" && user?.profileImageUrl) ||
                   (user?.role === "employer" && user?.companyPhoto) ||
                   profileImagePreview) && (
@@ -1366,7 +1313,6 @@ const Profile = () => {
                   </div>
                 )}
 
-                {/* Intro Video Display (only for developers) */}
                 {user?.role === "developer" &&
                   (user?.introVideoUrl || introVideoPreview) && (
                     <div>
@@ -1384,7 +1330,6 @@ const Profile = () => {
                     </div>
                   )}
 
-                {/* Resume Display (only for developers) */}
                 {user?.role === "developer" && user?.resumeUrl && (
                   <div>
                     <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
@@ -1420,7 +1365,19 @@ const Profile = () => {
                   </div>
                 )}
 
-                {/* Basic Information */}
+                {user?.aboutMe && (
+                  <div className="border-t pt-6">
+                    <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      About {user?.role === "developer" ? "Me" : "Our Company"}
+                    </h3>
+                    <div
+                      className="prose prose-sm max-w-none bg-gray-50 rounded-lg p-4 border border-gray-200"
+                      dangerouslySetInnerHTML={{ __html: user.aboutMe }}
+                    />
+                  </div>
+                )}
+
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-4">
                     Basic Information
@@ -1449,7 +1406,6 @@ const Profile = () => {
                   </div>
                 </div>
 
-                {/* Skills Section (only for developers) */}
                 {user?.role === "developer" && (
                   <div className="border-t pt-6">
                     <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
@@ -1475,7 +1431,6 @@ const Profile = () => {
                   </div>
                 )}
 
-                {/* Company Information (for employers) */}
                 {user?.role === "employer" && (
                   <div className="border-t pt-6">
                     <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
