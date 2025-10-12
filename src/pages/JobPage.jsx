@@ -3,7 +3,7 @@ import { FaArrowLeft, FaMapMarker, FaBriefcase } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { useAuth } from "../contexts/AuthContext";
 import { useState, useEffect } from "react";
-import { Video, FileText } from "lucide-react";
+import { Video, FileText, User } from "lucide-react";
 import defaultProfile from "../assets/images/profilephoto.jpg";
 
 const JobPage = ({ deleteJob }) => {
@@ -13,6 +13,7 @@ const JobPage = ({ deleteJob }) => {
   const [alreadyApplied, setAlreadyApplied] = useState(false);
   const [showApplications, setShowApplications] = useState(false);
   const [loadingApplications, setLoadingApplications] = useState(false);
+  const [expandedAboutMe, setExpandedAboutMe] = useState({}); // Track which "About Me" sections are expanded
 
   const navigate = useNavigate();
   const { id } = useParams();
@@ -40,7 +41,7 @@ const JobPage = ({ deleteJob }) => {
     }
   }, [job.id, user.id, isDeveloper]);
 
-  // ✅ Apply to job - NOW INCLUDES RESUME
+  // ✅ Apply to job - NOW INCLUDES RESUME & ABOUT ME
   const handleApply = async (e) => {
     e.preventDefault();
     setIsApplying(true);
@@ -53,7 +54,8 @@ const JobPage = ({ deleteJob }) => {
       appliedAt: new Date().toISOString(),
       profile: user.profileImageUrl,
       video: user.introVideoUrl,
-      resume: user.resumeUrl, // ✅ ADDED RESUME
+      resume: user.resumeUrl,
+      aboutMe: user.aboutMe, // ✅ ADDED ABOUT ME
       status: "pending",
     };
 
@@ -131,7 +133,15 @@ const JobPage = ({ deleteJob }) => {
     }
   };
 
-  // ✅ Load applications - NOW INCLUDES RESUME
+  // ✅ Toggle About Me expansion
+  const toggleAboutMe = (appId) => {
+    setExpandedAboutMe((prev) => ({
+      ...prev,
+      [appId]: !prev[appId],
+    }));
+  };
+
+  // ✅ Load applications - NOW INCLUDES ABOUT ME
   const handleViewApplications = async () => {
     try {
       setLoadingApplications(true);
@@ -163,7 +173,7 @@ const JobPage = ({ deleteJob }) => {
         return map;
       }, {});
 
-      // ✅ Merge missing profile + video + RESUME from user
+      // ✅ Merge missing profile + video + resume + ABOUT ME from user
       const applicationsWithSkills = filteredApplications.map((application) => {
         const applicant = usersMap[application.applicantId];
 
@@ -173,7 +183,8 @@ const JobPage = ({ deleteJob }) => {
             applicantSkills: [],
             profile: "",
             video: "",
-            resume: "", // ✅ ADDED
+            resume: "",
+            aboutMe: "", // ✅ ADDED
           };
         }
 
@@ -187,7 +198,8 @@ const JobPage = ({ deleteJob }) => {
           applicantSkills: applicantSkillNames,
           profile: application.profile || applicant.profileImageUrl,
           video: application.video || applicant.introVideoUrl,
-          resume: application.resume || applicant.resumeUrl, // ✅ ADDED
+          resume: application.resume || applicant.resumeUrl,
+          aboutMe: application.aboutMe || applicant.aboutMe, // ✅ ADDED
         };
       });
 
@@ -290,77 +302,56 @@ const JobPage = ({ deleteJob }) => {
                 </button>
               )}
 
-              {/* ✅ Applications list - NOW WITH RESUME BUTTON */}
+              {/* ✅ Applications list - NOW WITH ABOUT ME SECTION */}
               {showApplications && (
                 <div className="bg-white p-8 rounded-2xl shadow-lg mt-8 border border-gray-100">
                   <h3 className="text-indigo-700 text-xl font-semibold mb-6 flex items-center">
                     Applications ({applications.length})
                   </h3>
                   {applications.length > 0 ? (
-                    <ul className="space-y-5">
+                    <ul className="space-y-6">
                       {applications.map((app) => (
                         <li
                           key={app.id}
-                          className="border border-gray-200 p-5 rounded-xl shadow-sm hover:shadow-md transition-shadow bg-gray-50"
+                          className="border border-gray-200 p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow bg-gray-50"
                         >
-                          <div className="flex justify-between items-start">
-                            {/* ✅ Left section */}
-                            <div className="flex gap-4 items-start">
-                              <img
-                                src={app.profile || defaultProfile}
-                                alt={app.applicantName}
-                                className="w-14 h-14 rounded-full object-cover border-2 border-gray-200"
-                              />
-                              <div>
-                                <p className="text-lg font-semibold text-gray-800">
-                                  {app.applicantName}
-                                </p>
-                                <p className="text-gray-600 text-sm">
-                                  {app.applicantEmail}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  Applied at:{" "}
-                                  {new Date(app.appliedAt).toLocaleString()}
-                                </p>
-                                <p className="mt-2 text-sm">
-                                  Status:{" "}
-                                  <span
-                                    className={
-                                      app.status === "approved"
-                                        ? "text-green-600 font-semibold"
-                                        : app.status === "rejected"
-                                        ? "text-red-600 font-semibold"
-                                        : "text-yellow-600 font-semibold"
-                                    }
-                                  >
-                                    {app.status}
-                                  </span>
-                                </p>
-
-                                {app.applicantSkills?.length > 0 && (
-                                  <div className="mt-3">
-                                    <h4 className="text-sm font-medium text-gray-700 mb-2">
-                                      Skills:
-                                    </h4>
-                                    <div className="flex flex-wrap gap-2">
-                                      {app.applicantSkills.map(
-                                        (skill, index) => (
-                                          <span
-                                            key={index}
-                                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                                          >
-                                            {skill}
-                                          </span>
-                                        )
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
+                          <div className="flex flex-col gap-4">
+                            {/* ✅ Top section - Profile & Basic Info */}
+                            <div className="flex justify-between items-start">
+                              <div className="flex gap-4 items-start">
+                                <img
+                                  src={app.profile || defaultProfile}
+                                  alt={app.applicantName}
+                                  className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                                />
+                                <div>
+                                  <p className="text-lg font-semibold text-gray-800">
+                                    {app.applicantName}
+                                  </p>
+                                  <p className="text-gray-600 text-sm">
+                                    {app.applicantEmail}
+                                  </p>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Applied at:{" "}
+                                    {new Date(app.appliedAt).toLocaleString()}
+                                  </p>
+                                  <p className="mt-2 text-sm">
+                                    Status:{" "}
+                                    <span
+                                      className={
+                                        app.status === "approved"
+                                          ? "text-green-600 font-semibold"
+                                          : app.status === "rejected"
+                                          ? "text-red-600 font-semibold"
+                                          : "text-yellow-600 font-semibold"
+                                      }
+                                    >
+                                      {app.status}
+                                    </span>
+                                  </p>
+                                </div>
                               </div>
-                            </div>
 
-                            {/* ✅ Right section - Media & Actions */}
-                            <div className="flex flex-col items-end gap-3">
                               {/* ✅ Media buttons - VIDEO & RESUME */}
                               <div className="flex gap-2">
                                 {app.video && (
@@ -393,25 +384,114 @@ const JobPage = ({ deleteJob }) => {
                                   </a>
                                 )}
                               </div>
+                            </div>
 
-                              {/* Action buttons */}
-                              {app.status === "pending" && (
-                                <div className="flex gap-2 mt-2">
+                            {/* ✅ Skills Section */}
+                            {app.applicantSkills?.length > 0 && (
+                              <div className="border-t border-gray-200 pt-4">
+                                <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                                  <span className="w-1 h-4 bg-blue-500 rounded"></span>
+                                  Skills
+                                </h4>
+                                <div className="flex flex-wrap gap-2">
+                                  {app.applicantSkills.map((skill, index) => (
+                                    <span
+                                      key={index}
+                                      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200"
+                                    >
+                                      {skill}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* ✅ ABOUT ME SECTION */}
+                            {app.aboutMe && (
+                              <div className="border-t border-gray-200 pt-4">
+                                <div className="flex items-center justify-between mb-3">
+                                  <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                    <User className="w-4 h-4 text-indigo-600" />
+                                    About {app.applicantName.split(" ")[0]}
+                                  </h4>
                                   <button
-                                    onClick={() => handleApprove(app.id)}
-                                    className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-md transition-all"
+                                    onClick={() => toggleAboutMe(app.id)}
+                                    className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
                                   >
-                                    Approve
-                                  </button>
-                                  <button
-                                    onClick={() => handleReject(app.id)}
-                                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-md transition-all"
-                                  >
-                                    Reject
+                                    {expandedAboutMe[app.id] ? (
+                                      <>
+                                        Show Less
+                                        <svg
+                                          className="w-3 h-3"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M5 15l7-7 7 7"
+                                          />
+                                        </svg>
+                                      </>
+                                    ) : (
+                                      <>
+                                        Show More
+                                        <svg
+                                          className="w-3 h-3"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M19 9l-7 7-7-7"
+                                          />
+                                        </svg>
+                                      </>
+                                    )}
                                   </button>
                                 </div>
-                              )}
-                            </div>
+                                <div
+                                  className={`bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg p-4 border border-indigo-100 transition-all duration-300 ${
+                                    expandedAboutMe[app.id]
+                                      ? "max-h-[500px] overflow-y-auto"
+                                      : "max-h-[120px] overflow-hidden"
+                                  }`}
+                                >
+                                  <div
+                                    className="prose prose-sm max-w-none text-gray-700 prose-headings:text-indigo-900 prose-strong:text-gray-900 prose-a:text-indigo-600"
+                                    dangerouslySetInnerHTML={{
+                                      __html: app.aboutMe,
+                                    }}
+                                  />
+                                  {!expandedAboutMe[app.id] && (
+                                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-indigo-50 to-transparent pointer-events-none"></div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* ✅ Action Buttons */}
+                            {app.status === "pending" && (
+                              <div className="flex gap-3 pt-4 border-t border-gray-200">
+                                <button
+                                  onClick={() => handleApprove(app.id)}
+                                  className="flex-1 px-4 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-md transition-all font-medium text-sm"
+                                >
+                                  ✓ Approve Application
+                                </button>
+                                <button
+                                  onClick={() => handleReject(app.id)}
+                                  className="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-md transition-all font-medium text-sm"
+                                >
+                                  ✗ Reject Application
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </li>
                       ))}
