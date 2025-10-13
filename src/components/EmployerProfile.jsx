@@ -65,9 +65,12 @@ const EmployerProfile = () => {
           <p className="text-gray-600 flex items-center gap-2 mt-2">
             <Mail className="w-5 h-5 text-gray-500" /> {employer.email}
           </p>
-          <p className="mt-2 text-sm text-gray-500">
-            {employer.description || "No company description provided."}
-          </p>
+          <div
+            className="mt-2 text-sm text-gray-500"
+            dangerouslySetInnerHTML={{
+              __html: employer.aboutMe || "No company description provided.",
+            }}
+          />
         </div>
       </div>
 

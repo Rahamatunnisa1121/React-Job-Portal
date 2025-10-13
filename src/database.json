@@ -33,8 +33,8 @@
       "email": "jane@company.com",
       "password": "123456",
       "role": "employer",
-      "companyPhoto": "",
-      "aboutMe": "<h2>Hiring React Developers!!<strong><span class=\"ql-cursor\">﻿</span></strong></h2>"
+      "companyPhoto": "https://4g-s3-upload.s3.ap-south-1.amazonaws.com/ruhi/profiles/2_profiles_1760334664132.jpg",
+      "aboutMe": "<h2>Hiring React Developers!!<strong>﻿</strong></h2>"
     },
     {
       "id": "3",
