@@ -3,7 +3,7 @@ import { FaArrowLeft, FaMapMarker, FaBriefcase } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { useAuth } from "../contexts/AuthContext";
 import { useState, useEffect } from "react";
-import { Video, FileText, User } from "lucide-react";
+import { Video, FileText, User, X, Download } from "lucide-react";
 import defaultProfile from "../assets/images/profilephoto.jpg";
 
 const JobPage = ({ deleteJob }) => {
@@ -13,11 +13,30 @@ const JobPage = ({ deleteJob }) => {
   const [alreadyApplied, setAlreadyApplied] = useState(false);
   const [showApplications, setShowApplications] = useState(false);
   const [loadingApplications, setLoadingApplications] = useState(false);
-  const [expandedAboutMe, setExpandedAboutMe] = useState({}); // Track which "About Me" sections are expanded
+  const [expandedAboutMe, setExpandedAboutMe] = useState({});
+
+  // ✅ Modal states
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [showResumeModal, setShowResumeModal] = useState(false);
+  const [currentVideoUrl, setCurrentVideoUrl] = useState("");
+  const [currentResumeUrl, setCurrentResumeUrl] = useState("");
+  const [currentApplicantName, setCurrentApplicantName] = useState("");
 
   const navigate = useNavigate();
   const { id } = useParams();
   const job = useLoaderData();
+
+  // ✅ Close modal on ESC key
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape") {
+        setShowVideoModal(false);
+        setShowResumeModal(false);
+      }
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, []);
 
   // ✅ Check if already applied
   useEffect(() => {
@@ -41,7 +60,37 @@ const JobPage = ({ deleteJob }) => {
     }
   }, [job.id, user.id, isDeveloper]);
 
-  // ✅ Apply to job - NOW INCLUDES RESUME & ABOUT ME
+  // ✅ Open Video Modal
+  const openVideoModal = (videoUrl, applicantName) => {
+    setCurrentVideoUrl(videoUrl);
+    setCurrentApplicantName(applicantName);
+    setShowVideoModal(true);
+    document.body.style.overflow = "hidden"; // Prevent background scroll
+  };
+
+  // ✅ Close Video Modal
+  const closeVideoModal = () => {
+    setShowVideoModal(false);
+    setCurrentVideoUrl("");
+    document.body.style.overflow = "auto";
+  };
+
+  // ✅ Open Resume Modal
+  const openResumeModal = (resumeUrl, applicantName) => {
+    setCurrentResumeUrl(resumeUrl);
+    setCurrentApplicantName(applicantName);
+    setShowResumeModal(true);
+    document.body.style.overflow = "hidden";
+  };
+
+  // ✅ Close Resume Modal
+  const closeResumeModal = () => {
+    setShowResumeModal(false);
+    setCurrentResumeUrl("");
+    document.body.style.overflow = "auto";
+  };
+
+  // ✅ Apply to job
   const handleApply = async (e) => {
     e.preventDefault();
     setIsApplying(true);
@@ -55,7 +104,7 @@ const JobPage = ({ deleteJob }) => {
       profile: user.profileImageUrl,
       video: user.introVideoUrl,
       resume: user.resumeUrl,
-      aboutMe: user.aboutMe, // ✅ ADDED ABOUT ME
+      aboutMe: user.aboutMe,
       status: "pending",
     };
 
@@ -141,7 +190,7 @@ const JobPage = ({ deleteJob }) => {
     }));
   };
 
-  // ✅ Load applications - NOW INCLUDES ABOUT ME
+  // ✅ Load applications
   const handleViewApplications = async () => {
     try {
       setLoadingApplications(true);
@@ -173,7 +222,6 @@ const JobPage = ({ deleteJob }) => {
         return map;
       }, {});
 
-      // ✅ Merge missing profile + video + resume + ABOUT ME from user
       const applicationsWithSkills = filteredApplications.map((application) => {
         const applicant = usersMap[application.applicantId];
 
@@ -184,7 +232,7 @@ const JobPage = ({ deleteJob }) => {
             profile: "",
             video: "",
             resume: "",
-            aboutMe: "", // ✅ ADDED
+            aboutMe: "",
           };
         }
 
@@ -199,7 +247,7 @@ const JobPage = ({ deleteJob }) => {
           profile: application.profile || applicant.profileImageUrl,
           video: application.video || applicant.introVideoUrl,
           resume: application.resume || applicant.resumeUrl,
-          aboutMe: application.aboutMe || applicant.aboutMe, // ✅ ADDED
+          aboutMe: application.aboutMe || applicant.aboutMe,
         };
       });
 
@@ -266,7 +314,6 @@ const JobPage = ({ deleteJob }) => {
               {isDeveloper() && (
                 <>
                   <div className="mt-6 flex flex-wrap gap-3">
-                    {/* Apply Now Button */}
                     <button
                       onClick={handleApply}
                       disabled={isApplying || alreadyApplied}
@@ -280,7 +327,6 @@ const JobPage = ({ deleteJob }) => {
                         : "Apply Now"}
                     </button>
 
-                    {/* View Company Button */}
                     <button
                       onClick={handleViewCompany}
                       className="flex-1 min-w-[150px] px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg text-base flex items-center justify-center gap-2 transition-all duration-300"
@@ -302,7 +348,7 @@ const JobPage = ({ deleteJob }) => {
                 </button>
               )}
 
-              {/* ✅ Applications list - NOW WITH ABOUT ME SECTION */}
+              {/* ✅ Applications list */}
               {showApplications && (
                 <div className="bg-white p-8 rounded-2xl shadow-lg mt-8 border border-gray-100">
                   <h3 className="text-indigo-700 text-xl font-semibold mb-6 flex items-center">
@@ -316,7 +362,7 @@ const JobPage = ({ deleteJob }) => {
                           className="border border-gray-200 p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow bg-gray-50"
                         >
                           <div className="flex flex-col gap-4">
-                            {/* ✅ Top section - Profile & Basic Info */}
+                            {/* ✅ Top section */}
                             <div className="flex justify-between items-start">
                               <div className="flex gap-4 items-start">
                                 <img
@@ -352,13 +398,16 @@ const JobPage = ({ deleteJob }) => {
                                 </div>
                               </div>
 
-                              {/* ✅ Media buttons - VIDEO & RESUME */}
+                              {/* ✅ Media buttons - NOW OPENS MODAL */}
                               <div className="flex gap-2">
                                 {app.video && (
-                                  <a
-                                    href={app.video}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                  <button
+                                    onClick={() =>
+                                      openVideoModal(
+                                        app.video,
+                                        app.applicantName
+                                      )
+                                    }
                                     className="flex items-center gap-1 px-3 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg transition-all shadow-sm hover:shadow-md"
                                     title="View Introduction Video"
                                   >
@@ -366,14 +415,17 @@ const JobPage = ({ deleteJob }) => {
                                     <span className="text-sm font-medium">
                                       Video
                                     </span>
-                                  </a>
+                                  </button>
                                 )}
 
                                 {app.resume && (
-                                  <a
-                                    href={app.resume}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                  <button
+                                    onClick={() =>
+                                      openResumeModal(
+                                        app.resume,
+                                        app.applicantName
+                                      )
+                                    }
                                     className="flex items-center gap-1 px-3 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-all shadow-sm hover:shadow-md"
                                     title="View Resume/CV"
                                   >
@@ -381,7 +433,7 @@ const JobPage = ({ deleteJob }) => {
                                     <span className="text-sm font-medium">
                                       Resume
                                     </span>
-                                  </a>
+                                  </button>
                                 )}
                               </div>
                             </div>
@@ -406,7 +458,7 @@ const JobPage = ({ deleteJob }) => {
                               </div>
                             )}
 
-                            {/* ✅ ABOUT ME SECTION */}
+                            {/* ✅ About Me Section */}
                             {app.aboutMe && (
                               <div className="border-t border-gray-200 pt-4">
                                 <div className="flex items-center justify-between mb-3">
@@ -456,7 +508,7 @@ const JobPage = ({ deleteJob }) => {
                                   </button>
                                 </div>
                                 <div
-                                  className={`bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg p-4 border border-indigo-100 transition-all duration-300 ${
+                                  className={`relative bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg p-4 border border-indigo-100 transition-all duration-300 ${
                                     expandedAboutMe[app.id]
                                       ? "max-h-[500px] overflow-y-auto"
                                       : "max-h-[120px] overflow-hidden"
@@ -545,6 +597,181 @@ const JobPage = ({ deleteJob }) => {
           </div>
         </div>
       </section>
+
+      {/* ✅ VIDEO MODAL */}
+      {showVideoModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4 animate-fadeIn"
+          onClick={closeVideoModal}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden animate-slideUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                  <Video className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Introduction Video
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {currentApplicantName}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={closeVideoModal}
+                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors"
+                title="Close (ESC)"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 bg-gray-900">
+              <video
+                src={currentVideoUrl}
+                controls
+                autoPlay
+                className="w-full rounded-lg shadow-lg"
+                style={{ maxHeight: "70vh" }}
+              >
+                Your browser does not support the video tag.
+              </video>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
+              <p className="text-sm text-gray-600">
+                💡 Tip: Press{" "}
+                <kbd className="px-2 py-1 bg-gray-200 rounded text-xs font-mono">
+                  ESC
+                </kbd>{" "}
+                to close
+              </p>
+              <button
+                onClick={closeVideoModal}
+                className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ RESUME MODAL */}
+      {showResumeModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4 animate-fadeIn"
+          onClick={closeResumeModal}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden animate-slideUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Resume / CV
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {currentApplicantName}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={currentResumeUrl}
+                  download
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+                  title="Download Resume"
+                >
+                  <Download className="w-4 h-4" />
+                  Download
+                </a>
+                <button
+                  onClick={closeResumeModal}
+                  className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors"
+                  title="Close (ESC)"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 bg-gray-100 h-[calc(90vh-180px)] overflow-auto">
+              <iframe
+                src={currentResumeUrl}
+                className="w-full h-full rounded-lg shadow-lg bg-white"
+                title={`${currentApplicantName}'s Resume`}
+              />
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
+              <p className="text-sm text-gray-600">
+                💡 Tip: Press{" "}
+                <kbd className="px-2 py-1 bg-gray-200 rounded text-xs font-mono">
+                  ESC
+                </kbd>{" "}
+                to close
+              </p>
+              <button
+                onClick={closeResumeModal}
+                className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        @keyframes slideUp {
+          from {
+            transform: translateY(50px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+
+        .animate-fadeIn {
+          animation: fadeIn 0.2s ease-out;
+        }
+
+        .animate-slideUp {
+          animation: slideUp 0.3s ease-out;
+        }
+
+        kbd {
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+      `}</style>
     </>
   );
 };

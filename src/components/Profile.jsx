@@ -29,6 +29,7 @@ import {
   Trash2,
   Play,
   FileText,
+  Download,
 } from "lucide-react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -75,6 +76,10 @@ const Profile = () => {
   const [resumeFileName, setResumeFileName] = useState("");
   const [isUploadingResume, setIsUploadingResume] = useState(false);
 
+  // ✅ Modal states
+  const [showResumeModal, setShowResumeModal] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -91,6 +96,39 @@ const Profile = () => {
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
+
+  // ✅ Close modal on ESC key
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape") {
+        setShowResumeModal(false);
+        setShowVideoModal(false);
+      }
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, []);
+
+  // ✅ Modal functions
+  const openResumeModal = () => {
+    setShowResumeModal(true);
+    document.body.style.overflow = "hidden";
+  };
+
+  const closeResumeModal = () => {
+    setShowResumeModal(false);
+    document.body.style.overflow = "auto";
+  };
+
+  const openVideoModal = () => {
+    setShowVideoModal(true);
+    document.body.style.overflow = "hidden";
+  };
+
+  const closeVideoModal = () => {
+    setShowVideoModal(false);
+    document.body.style.overflow = "auto";
+  };
 
   useEffect(() => {
     if (user) {
@@ -630,481 +668,460 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-8 px-4">
-      <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-8">
-          <div
-            className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 shadow-lg ${
-              user?.role === "developer"
-                ? "bg-gradient-to-r from-blue-600 to-indigo-600"
-                : "bg-gradient-to-r from-purple-600 to-pink-600"
-            }`}
-          >
-            {user?.role === "developer" ? (
-              <Code className="w-8 h-8 text-white" />
-            ) : (
-              <Building className="w-8 h-8 text-white" />
-            )}
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {user?.role === "developer" ? "Developer" : "Employer"} Profile
-          </h1>
-          <p className="text-gray-600">
-            {isEditing
-              ? "Edit your profile information"
-              : "Manage your account details"}
-          </p>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-          <div
-            className={`px-8 py-6 ${
-              user?.role === "developer"
-                ? "bg-gradient-to-r from-blue-600 to-indigo-600"
-                : "bg-gradient-to-r from-purple-600 to-pink-600"
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="relative w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center overflow-hidden">
-                  {(user?.role === "developer" &&
-                    (user?.profileImageUrl || profileImagePreview)) ||
-                  (user?.role === "employer" &&
-                    (user?.companyPhoto || profileImagePreview)) ? (
-                    <img
-                      src={
-                        user?.role === "developer"
-                          ? profileImagePreview || user?.profileImageUrl
-                          : profileImagePreview || user?.companyPhoto
-                      }
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : user?.role === "developer" ? (
-                    <User className="w-8 h-8 text-white" />
-                  ) : (
-                    <Building className="w-8 h-8 text-white" />
-                  )}
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-white">{user?.name}</h2>
-                  <p className="text-blue-100">{user?.email}</p>
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-white bg-opacity-20 text-white mt-1">
-                    {user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)}
-                  </span>
-                </div>
-              </div>
-
-              {!isEditing && (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg transition-all duration-200"
-                >
-                  <Edit3 className="w-4 h-4" />
-                  Edit Profile
-                </button>
+    <>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-8 px-4">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-8">
+            <div
+              className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 shadow-lg ${
+                user?.role === "developer"
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600"
+                  : "bg-gradient-to-r from-purple-600 to-pink-600"
+              }`}
+            >
+              {user?.role === "developer" ? (
+                <Code className="w-8 h-8 text-white" />
+              ) : (
+                <Building className="w-8 h-8 text-white" />
               )}
             </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              {user?.role === "developer" ? "Developer" : "Employer"} Profile
+            </h1>
+            <p className="text-gray-600">
+              {isEditing
+                ? "Edit your profile information"
+                : "Manage your account details"}
+            </p>
           </div>
 
-          <div className="p-8">
-            {message.text && (
-              <div
-                className={`flex items-center gap-2 p-3 mb-6 rounded-lg ${
-                  message.type === "success"
-                    ? "bg-green-50 border border-green-200 text-green-700"
-                    : "bg-red-50 border border-red-200 text-red-700"
-                }`}
-              >
-                {message.type === "success" ? (
-                  <CheckCircle className="h-5 w-5 flex-shrink-0" />
-                ) : (
-                  <AlertCircle className="h-5 w-5 flex-shrink-0" />
-                )}
-                <span className="text-sm">{message.text}</span>
-              </div>
-            )}
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+            <div
+              className={`px-8 py-6 ${
+                user?.role === "developer"
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600"
+                  : "bg-gradient-to-r from-purple-600 to-pink-600"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="relative w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center overflow-hidden">
+                    {(user?.role === "developer" &&
+                      (user?.profileImageUrl || profileImagePreview)) ||
+                    (user?.role === "employer" &&
+                      (user?.companyPhoto || profileImagePreview)) ? (
+                      <img
+                        src={
+                          user?.role === "developer"
+                            ? profileImagePreview || user?.profileImageUrl
+                            : profileImagePreview || user?.companyPhoto
+                        }
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : user?.role === "developer" ? (
+                      <User className="w-8 h-8 text-white" />
+                    ) : (
+                      <Building className="w-8 h-8 text-white" />
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">
+                      {user?.name}
+                    </h2>
+                    <p className="text-blue-100">{user?.email}</p>
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-white bg-opacity-20 text-white mt-1">
+                      {user?.role?.charAt(0).toUpperCase() +
+                        user?.role?.slice(1)}
+                    </span>
+                  </div>
+                </div>
 
-            {isEditing ? (
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {formData.role === "developer"
-                      ? "Profile Photo"
-                      : "Company Logo"}
-                  </label>
-                  <div className="flex items-center space-x-4">
-                    <div className="relative w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center overflow-hidden bg-gray-50">
-                      {profileImagePreview ? (
-                        <img
-                          src={profileImagePreview}
-                          alt="Preview"
-                          className="w-full h-full object-cover rounded-lg"
+                {!isEditing && (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg transition-all duration-200"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    Edit Profile
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="p-8">
+              {message.text && (
+                <div
+                  className={`flex items-center gap-2 p-3 mb-6 rounded-lg ${
+                    message.type === "success"
+                      ? "bg-green-50 border border-green-200 text-green-700"
+                      : "bg-red-50 border border-red-200 text-red-700"
+                  }`}
+                >
+                  {message.type === "success" ? (
+                    <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                  )}
+                  <span className="text-sm">{message.text}</span>
+                </div>
+              )}
+
+              {isEditing ? (
+                <div className="space-y-6">
+                  {/* Profile Image Upload */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {formData.role === "developer"
+                        ? "Profile Photo"
+                        : "Company Logo"}
+                    </label>
+                    <div className="flex items-center space-x-4">
+                      <div className="relative w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center overflow-hidden bg-gray-50">
+                        {profileImagePreview ? (
+                          <img
+                            src={profileImagePreview}
+                            alt="Preview"
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                        ) : (
+                          <div className="text-center">
+                            {formData.role === "developer" ? (
+                              <User className="w-8 h-8 text-gray-400 mx-auto mb-1" />
+                            ) : (
+                              <Building className="w-8 h-8 text-gray-400 mx-auto mb-1" />
+                            )}
+                            <span className="text-xs text-gray-500">
+                              No image
+                            </span>
+                          </div>
+                        )}
+                        {profileImagePreview && (
+                          <button
+                            type="button"
+                            onClick={removeProfileImage}
+                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageSelect}
+                          className="hidden"
                         />
-                      ) : (
-                        <div className="text-center">
-                          {formData.role === "developer" ? (
-                            <User className="w-8 h-8 text-gray-400 mx-auto mb-1" />
-                          ) : (
-                            <Building className="w-8 h-8 text-gray-400 mx-auto mb-1" />
-                          )}
-                          <span className="text-xs text-gray-500">
-                            No image
-                          </span>
-                        </div>
-                      )}
-                      {profileImagePreview && (
                         <button
                           type="button"
-                          onClick={removeProfileImage}
-                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors duration-200"
                         >
-                          <X className="w-3 h-3" />
+                          <Camera className="w-4 h-4" />
+                          Choose{" "}
+                          {formData.role === "developer" ? "Photo" : "Logo"}
                         </button>
-                      )}
+                        <p className="text-xs text-gray-500 mt-1">
+                          JPG, PNG up to 5MB
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageSelect}
-                        className="hidden"
+                  </div>
+
+                  {/* Video Upload */}
+                  {formData.role === "developer" && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Introduction Video
+                      </label>
+                      <div className="space-y-3">
+                        {introVideoPreview && (
+                          <div className="relative">
+                            <video
+                              src={introVideoPreview}
+                              controls
+                              className="w-full max-h-48 rounded-lg bg-gray-100"
+                            />
+                            <button
+                              type="button"
+                              onClick={removeIntroVideo}
+                              className="absolute top-2 right-2 w-8 h-8 bg-red-500 bg-opacity-75 text-white rounded-full flex items-center justify-center hover:bg-opacity-100 transition-all"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+
+                        <div className="flex items-center space-x-4">
+                          <div
+                            className={`w-24 h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 ${
+                              introVideoPreview ? "opacity-50" : ""
+                            }`}
+                          >
+                            <Video className="w-6 h-6 text-gray-400" />
+                          </div>
+                          <div className="flex-1">
+                            <input
+                              ref={videoInputRef}
+                              type="file"
+                              accept="video/*"
+                              onChange={handleVideoSelect}
+                              className="hidden"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => videoInputRef.current?.click()}
+                              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors duration-200"
+                            >
+                              <Upload className="w-4 h-4" />
+                              Choose Video
+                            </button>
+                            <p className="text-xs text-gray-500 mt-1">
+                              MP4, MOV, AVI up to 50MB
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <p className="text-sm text-blue-700">
+                            💡 <strong>Tip:</strong> Record a short video (30-60
+                            seconds) introducing yourself, your experience, and
+                            what makes you unique as a developer.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Resume Upload */}
+                  {formData.role === "developer" && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Resume / CV
+                      </label>
+                      <div className="space-y-3">
+                        {(resumeFileName || formData.resumeUrl) && (
+                          <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                            <div className="flex items-center gap-3 flex-1">
+                              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <Upload className="w-5 h-5 text-blue-600" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">
+                                  {resumeFileName ||
+                                    formData.resumeUrl.split("/").pop()}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {resume
+                                    ? `${(resume.size / 1024).toFixed(0)} KB`
+                                    : "Previously uploaded"}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {formData.resumeUrl && !resume && (
+                                <a
+                                  href={formData.resumeUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="View Resume"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </a>
+                              )}
+                              <button
+                                type="button"
+                                onClick={removeResume}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Remove Resume"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex items-center space-x-4">
+                          <div
+                            className={`w-24 h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 ${
+                              resumeFileName ? "opacity-50" : ""
+                            }`}
+                          >
+                            <Upload className="w-6 h-6 text-gray-400" />
+                          </div>
+                          <div className="flex-1">
+                            <input
+                              ref={resumeInputRef}
+                              type="file"
+                              accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                              onChange={handleResumeSelect}
+                              className="hidden"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => resumeInputRef.current?.click()}
+                              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors duration-200"
+                            >
+                              <Upload className="w-4 h-4" />
+                              {resumeFileName
+                                ? "Change Resume"
+                                : "Upload Resume"}
+                            </button>
+                            <p className="text-xs text-gray-500 mt-1">
+                              PDF, DOC, DOCX up to 10MB
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                          <p className="text-sm text-green-700">
+                            📄 <strong>Pro Tip:</strong> Keep your resume
+                            updated and highlight your most relevant skills and
+                            experience. Use a clean, professional format.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* About Me Section */}
+                  <div className="space-y-4">
+                    <div className="border-t pt-4">
+                      <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                        <FileText className="h-5 w-5" />
+                        About Me
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-3">
+                        {formData.role === "developer"
+                          ? "Tell employers about yourself, your experience, and what you're looking for"
+                          : "Describe your company, culture, and what makes it a great place to work"}
+                      </p>
+                    </div>
+
+                    <div className="border border-gray-300 rounded-lg overflow-hidden">
+                      <ReactQuill
+                        theme="snow"
+                        value={formData.aboutMe}
+                        onChange={(content) =>
+                          setFormData((prev) => ({ ...prev, aboutMe: content }))
+                        }
+                        modules={{
+                          toolbar: [
+                            [{ header: [1, 2, 3, false] }],
+                            ["bold", "italic", "underline", "strike"],
+                            [{ list: "ordered" }, { list: "bullet" }],
+                            [{ align: [] }],
+                            ["link", "image"],
+                            ["clean"],
+                          ],
+                        }}
+                        formats={[
+                          "header",
+                          "bold",
+                          "italic",
+                          "underline",
+                          "strike",
+                          "list",
+                          "bullet",
+                          "align",
+                          "link",
+                          "image",
+                        ]}
+                        placeholder={
+                          formData.role === "developer"
+                            ? "Share your story, experience, and career goals..."
+                            : "Tell developers about your company, team, and opportunities..."
+                        }
+                        className="bg-white"
+                        style={{ minHeight: "200px" }}
                       />
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors duration-200"
-                      >
-                        <Camera className="w-4 h-4" />
-                        Choose{" "}
-                        {formData.role === "developer" ? "Photo" : "Logo"}
-                      </button>
-                      <p className="text-xs text-gray-500 mt-1">
-                        JPG, PNG up to 5MB
+                    </div>
+
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-sm text-blue-700">
+                        💡 <strong>Tip:</strong> A compelling "About Me" section
+                        can help you stand out. Be authentic and highlight what
+                        makes you unique!
                       </p>
                     </div>
                   </div>
-                </div>
 
-                {formData.role === "developer" && (
+                  {/* Name Field */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Introduction Video
-                    </label>
-                    <div className="space-y-3">
-                      {introVideoPreview && (
-                        <div className="relative">
-                          <video
-                            src={introVideoPreview}
-                            controls
-                            className="w-full max-h-48 rounded-lg bg-gray-100"
-                          />
-                          <button
-                            type="button"
-                            onClick={removeIntroVideo}
-                            className="absolute top-2 right-2 w-8 h-8 bg-red-500 bg-opacity-75 text-white rounded-full flex items-center justify-center hover:bg-opacity-100 transition-all"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-
-                      <div className="flex items-center space-x-4">
-                        <div
-                          className={`w-24 h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 ${
-                            introVideoPreview ? "opacity-50" : ""
-                          }`}
-                        >
-                          <Video className="w-6 h-6 text-gray-400" />
-                        </div>
-                        <div className="flex-1">
-                          <input
-                            ref={videoInputRef}
-                            type="file"
-                            accept="video/*"
-                            onChange={handleVideoSelect}
-                            className="hidden"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => videoInputRef.current?.click()}
-                            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors duration-200"
-                          >
-                            <Upload className="w-4 h-4" />
-                            Choose Video
-                          </button>
-                          <p className="text-xs text-gray-500 mt-1">
-                            MP4, MOV, AVI up to 50MB
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <p className="text-sm text-blue-700">
-                          💡 <strong>Tip:</strong> Record a short video (30-60
-                          seconds) introducing yourself, your experience, and
-                          what makes you unique as a developer.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {formData.role === "developer" && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Resume / CV
-                    </label>
-                    <div className="space-y-3">
-                      {(resumeFileName || formData.resumeUrl) && (
-                        <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                          <div className="flex items-center gap-3 flex-1">
-                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                              <Upload className="w-5 h-5 text-blue-600" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">
-                                {resumeFileName ||
-                                  formData.resumeUrl.split("/").pop()}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {resume
-                                  ? `${(resume.size / 1024).toFixed(0)} KB`
-                                  : "Previously uploaded"}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {formData.resumeUrl && !resume && (
-                              <a
-                                href={formData.resumeUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="View Resume"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </a>
-                            )}
-                            <button
-                              type="button"
-                              onClick={removeResume}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Remove Resume"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex items-center space-x-4">
-                        <div
-                          className={`w-24 h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 ${
-                            resumeFileName ? "opacity-50" : ""
-                          }`}
-                        >
-                          <Upload className="w-6 h-6 text-gray-400" />
-                        </div>
-                        <div className="flex-1">
-                          <input
-                            ref={resumeInputRef}
-                            type="file"
-                            accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                            onChange={handleResumeSelect}
-                            className="hidden"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => resumeInputRef.current?.click()}
-                            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors duration-200"
-                          >
-                            <Upload className="w-4 h-4" />
-                            {resumeFileName ? "Change Resume" : "Upload Resume"}
-                          </button>
-                          <p className="text-xs text-gray-500 mt-1">
-                            PDF, DOC, DOCX up to 10MB
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                        <p className="text-sm text-green-700">
-                          📄 <strong>Pro Tip:</strong> Keep your resume updated
-                          and highlight your most relevant skills and
-                          experience. Use a clean, professional format.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* About Me Section with Rich Text Editor */}
-                <div className="space-y-4">
-                  <div className="border-t pt-4">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      About Me
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-3">
-                      {formData.role === "developer"
-                        ? "Tell employers about yourself, your experience, and what you're looking for"
-                        : "Describe your company, culture, and what makes it a great place to work"}
-                    </p>
-                  </div>
-
-                  <div className="border border-gray-300 rounded-lg overflow-hidden">
-                    <ReactQuill
-                      theme="snow"
-                      value={formData.aboutMe}
-                      onChange={(content) =>
-                        setFormData((prev) => ({ ...prev, aboutMe: content }))
-                      }
-                      modules={{
-                        toolbar: [
-                          [{ header: [1, 2, 3, false] }],
-                          ["bold", "italic", "underline", "strike"],
-                          [{ list: "ordered" }, { list: "bullet" }],
-                          [{ align: [] }],
-                          ["link", "image"],
-                          ["clean"],
-                        ],
-                      }}
-                      formats={[
-                        "header",
-                        "bold",
-                        "italic",
-                        "underline",
-                        "strike",
-                        "list",
-                        "bullet",
-                        "align",
-                        "link",
-                        "image",
-                      ]}
-                      placeholder={
-                        formData.role === "developer"
-                          ? "Share your story, experience, and career goals..."
-                          : "Tell developers about your company, team, and opportunities..."
-                      }
-                      className="bg-white"
-                      style={{ minHeight: "200px" }}
-                    />
-                  </div>
-
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p className="text-sm text-blue-700">
-                      💡 <strong>Tip:</strong> A compelling "About Me" section
-                      can help you stand out. Be authentic and highlight what
-                      makes you unique!
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Full Name
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <User className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      name="name"
-                      type="text"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                      placeholder="Enter your full name"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Mail className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                      placeholder="Enter your email"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="border-t pt-4">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">
-                      Change Password
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Leave blank to keep current password
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      New Password
+                      Full Name
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Lock className="h-5 w-5 text-gray-400" />
+                        <User className="h-5 w-5 text-gray-400" />
                       </div>
                       <input
-                        name="password"
-                        type={showPassword ? "text" : "password"}
-                        value={formData.password}
+                        name="name"
+                        type="text"
+                        value={formData.name}
                         onChange={handleInputChange}
-                        className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                        placeholder="Enter new password (optional)"
+                        className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                        placeholder="Enter your full name"
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-5 w-5" />
-                        ) : (
-                          <Eye className="h-5 w-5" />
-                        )}
-                      </button>
                     </div>
                   </div>
 
-                  {formData.password && (
+                  {/* Email Field */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Mail className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                        placeholder="Enter your email"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Password Section */}
+                  <div className="space-y-4">
+                    <div className="border-t pt-4">
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">
+                        Change Password
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Leave blank to keep current password
+                      </p>
+                    </div>
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Confirm New Password
+                        New Password
                       </label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <Lock className="h-5 w-5 text-gray-400" />
                         </div>
                         <input
-                          name="confirmPassword"
-                          type={showConfirmPassword ? "text" : "password"}
-                          value={formData.confirmPassword}
+                          name="password"
+                          type={showPassword ? "text" : "password"}
+                          value={formData.password}
                           onChange={handleInputChange}
                           className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                          placeholder="Confirm new password"
+                          placeholder="Enter new password (optional)"
                         />
                         <button
                           type="button"
-                          onClick={() =>
-                            setShowConfirmPassword(!showConfirmPassword)
-                          }
+                          onClick={() => setShowPassword(!showPassword)}
                           className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
                         >
-                          {showConfirmPassword ? (
+                          {showPassword ? (
                             <EyeOff className="h-5 w-5" />
                           ) : (
                             <Eye className="h-5 w-5" />
@@ -1112,382 +1129,616 @@ const Profile = () => {
                         </button>
                       </div>
                     </div>
-                  )}
-                </div>
 
-                {formData.role === "developer" && (
-                  <div className="space-y-4">
-                    <div className="border-t pt-4">
-                      <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
-                        <Code className="h-5 w-5" />
-                        Skills Management
-                      </h3>
-                    </div>
+                    {formData.password && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Confirm New Password
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Lock className="h-5 w-5 text-gray-400" />
+                          </div>
+                          <input
+                            name="confirmPassword"
+                            type={showConfirmPassword ? "text" : "password"}
+                            value={formData.confirmPassword}
+                            onChange={handleInputChange}
+                            className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                            placeholder="Confirm new password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowConfirmPassword(!showConfirmPassword)
+                            }
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOff className="h-5 w-5" />
+                            ) : (
+                              <Eye className="h-5 w-5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h4 className="text-sm font-medium text-gray-700 mb-3">
-                        Add New Skill
-                      </h4>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={newSkillName}
-                          onChange={(e) => setNewSkillName(e.target.value)}
-                          placeholder="Enter skill name (e.g., Python, React)"
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                          onKeyPress={(e) =>
-                            e.key === "Enter" && handleAddSkill()
-                          }
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAddSkill}
-                          disabled={isAddingSkill || !newSkillName.trim()}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                        >
-                          {isAddingSkill ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            "Add"
-                          )}
-                        </button>
+                  {/* Skills Management */}
+                  {formData.role === "developer" && (
+                    <div className="space-y-4">
+                      <div className="border-t pt-4">
+                        <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                          <Code className="h-5 w-5" />
+                          Skills Management
+                        </h3>
+                      </div>
+
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h4 className="text-sm font-medium text-gray-700 mb-3">
+                          Add New Skill
+                        </h4>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={newSkillName}
+                            onChange={(e) => setNewSkillName(e.target.value)}
+                            placeholder="Enter skill name (e.g., Python, React)"
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            onKeyPress={(e) =>
+                              e.key === "Enter" && handleAddSkill()
+                            }
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddSkill}
+                            disabled={isAddingSkill || !newSkillName.trim()}
+                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                          >
+                            {isAddingSkill ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              "Add"
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {formData.skills.length > 0 && (
+                        <div className="mb-4">
+                          <div className="text-sm text-gray-600 mb-2">
+                            Your selected skills:
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {formData.skills.map((skillId) => (
+                              <div
+                                key={skillId}
+                                className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                              >
+                                {getSkillName(skillId)}
+                                <button
+                                  type="button"
+                                  onClick={() => removeSkill(skillId)}
+                                  className="ml-1 text-blue-600 hover:text-blue-800"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="border border-gray-300 rounded-lg p-4 max-h-48 overflow-y-auto">
+                        <div className="flex justify-between items-center mb-3">
+                          <h4 className="text-sm font-medium text-gray-700">
+                            Available Skills
+                          </h4>
+                          <span className="text-xs text-gray-500">
+                            {availableSkills.length} skills available
+                          </span>
+                        </div>
+
+                        {skillsLoading ? (
+                          <div className="flex items-center justify-center py-4">
+                            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                            <span className="ml-2 text-sm text-gray-600">
+                              Loading skills...
+                            </span>
+                          </div>
+                        ) : availableSkills.length > 0 ? (
+                          <div className="grid grid-cols-1 gap-2">
+                            {availableSkills.map((skill) => (
+                              <div
+                                key={skill.id}
+                                className="flex items-center justify-between p-2 hover:bg-gray-50 rounded group"
+                              >
+                                <label className="flex items-center space-x-2 cursor-pointer flex-1">
+                                  <input
+                                    type="checkbox"
+                                    checked={formData.skills.includes(skill.id)}
+                                    onChange={() => handleSkillToggle(skill.id)}
+                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                  />
+                                  <span className="text-sm text-gray-700">
+                                    {skill.name}
+                                  </span>
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteSkill(skill.id)}
+                                  className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 p-1 transition-all duration-200"
+                                  title="Delete skill"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-4 text-sm text-gray-500">
+                            No skills available. Add your first skill above!
+                          </div>
+                        )}
                       </div>
                     </div>
+                  )}
 
-                    {formData.skills.length > 0 && (
-                      <div className="mb-4">
-                        <div className="text-sm text-gray-600 mb-2">
-                          Your selected skills:
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {formData.skills.map((skillId) => (
-                            <div
-                              key={skillId}
-                              className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-                            >
-                              {getSkillName(skillId)}
-                              <button
-                                type="button"
-                                onClick={() => removeSkill(skillId)}
-                                className="ml-1 text-blue-600 hover:text-blue-800"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 pt-6 border-t">
+                    <button
+                      onClick={handleSave}
+                      disabled={
+                        isSaving ||
+                        isUploadingImage ||
+                        isUploadingVideo ||
+                        isUploadingResume
+                      }
+                      className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSaving ||
+                      isUploadingImage ||
+                      isUploadingVideo ||
+                      isUploadingResume ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          {isUploadingImage &&
+                            `Uploading Image... ${uploadProgress}%`}
+                          {isUploadingVideo &&
+                            `Uploading Video... ${uploadProgress}%`}
+                          {isUploadingResume &&
+                            `Uploading Resume... ${uploadProgress}%`}
+                          {isSaving &&
+                            !isUploadingImage &&
+                            !isUploadingVideo &&
+                            !isUploadingResume &&
+                            "Saving..."}
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4" />
+                          Save Changes
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={handleCancel}
+                      disabled={
+                        isSaving ||
+                        isUploadingImage ||
+                        isUploadingVideo ||
+                        isUploadingResume
+                      }
+                      className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-all duration-200 disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Profile Image Display */}
+                  {((user?.role === "developer" && user?.profileImageUrl) ||
+                    (user?.role === "employer" && user?.companyPhoto) ||
+                    profileImagePreview) && (
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">
+                        {user?.role === "developer"
+                          ? "Profile Photo"
+                          : "Company Logo"}
+                      </h3>
+                      <div className="flex justify-center">
+                        <img
+                          src={
+                            user?.role === "developer"
+                              ? user?.profileImageUrl || profileImagePreview
+                              : user?.companyPhoto || profileImagePreview
+                          }
+                          alt={
+                            user?.role === "developer"
+                              ? "Profile"
+                              : "Company Logo"
+                          }
+                          className="w-32 h-32 object-cover rounded-lg border-2 border-gray-200"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Video Display - WITH MODAL */}
+                  {user?.role === "developer" &&
+                    (user?.introVideoUrl || introVideoPreview) && (
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                          <Video className="h-5 w-5" />
+                          Introduction Video
+                        </h3>
+                        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <Video className="w-6 h-6 text-purple-600" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">
+                                  Introduction Video
+                                </p>
+                                <p className="text-xs text-gray-600">
+                                  Click to watch your intro video
+                                </p>
+                              </div>
                             </div>
-                          ))}
+                            <button
+                              onClick={openVideoModal}
+                              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors duration-200"
+                            >
+                              <Play className="w-4 h-4" />
+                              Watch Video
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )}
 
-                    <div className="border border-gray-300 rounded-lg p-4 max-h-48 overflow-y-auto">
-                      <div className="flex justify-between items-center mb-3">
-                        <h4 className="text-sm font-medium text-gray-700">
-                          Available Skills
-                        </h4>
-                        <span className="text-xs text-gray-500">
-                          {availableSkills.length} skills available
-                        </span>
-                      </div>
-
-                      {skillsLoading ? (
-                        <div className="flex items-center justify-center py-4">
-                          <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-                          <span className="ml-2 text-sm text-gray-600">
-                            Loading skills...
-                          </span>
-                        </div>
-                      ) : availableSkills.length > 0 ? (
-                        <div className="grid grid-cols-1 gap-2">
-                          {availableSkills.map((skill) => (
-                            <div
-                              key={skill.id}
-                              className="flex items-center justify-between p-2 hover:bg-gray-50 rounded group"
-                            >
-                              <label className="flex items-center space-x-2 cursor-pointer flex-1">
-                                <input
-                                  type="checkbox"
-                                  checked={formData.skills.includes(skill.id)}
-                                  onChange={() => handleSkillToggle(skill.id)}
-                                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                />
-                                <span className="text-sm text-gray-700">
-                                  {skill.name}
-                                </span>
-                              </label>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteSkill(skill.id)}
-                                className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 p-1 transition-all duration-200"
-                                title="Delete skill"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
+                  {/* Resume Display - WITH MODAL */}
+                  {user?.role === "developer" && user?.resumeUrl && (
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                        <Upload className="h-5 w-5" />
+                        Resume / CV
+                      </h3>
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <Upload className="w-6 h-6 text-blue-600" />
                             </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">
+                                {user.resumeUrl.split("/").pop()}
+                              </p>
+                              <p className="text-xs text-gray-600">
+                                Resume document uploaded
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={openResumeModal}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors duration-200"
+                          >
+                            <Eye className="w-4 h-4" />
+                            View Resume
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* About Me Display */}
+                  {user?.aboutMe && (
+                    <div className="border-t pt-6">
+                      <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                        <FileText className="h-5 w-5" />
+                        About{" "}
+                        {user?.role === "developer" ? "Me" : "Our Company"}
+                      </h3>
+                      <div
+                        className="prose prose-sm max-w-none bg-gray-50 rounded-lg p-4 border border-gray-200"
+                        dangerouslySetInnerHTML={{ __html: user.aboutMe }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Basic Information */}
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">
+                      Basic Information
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500 mb-1">
+                          Name
+                        </label>
+                        <p className="text-gray-900 font-medium">
+                          {user?.name}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500 mb-1">
+                          Email
+                        </label>
+                        <p className="text-gray-900 font-medium">
+                          {user?.email}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500 mb-1">
+                          Account Type
+                        </label>
+                        <p className="text-gray-900 font-medium capitalize">
+                          {user?.role}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Skills Section */}
+                  {user?.role === "developer" && (
+                    <div className="border-t pt-6">
+                      <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                        <Code className="h-5 w-5" />
+                        Skills
+                      </h3>
+                      {user?.skills && user.skills.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {user.skills.map((skillId) => (
+                            <span
+                              key={skillId}
+                              className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
+                            >
+                              {getSkillName(skillId) || `Skill ID: ${skillId}`}
+                            </span>
                           ))}
                         </div>
                       ) : (
-                        <div className="text-center py-4 text-sm text-gray-500">
-                          No skills available. Add your first skill above!
-                        </div>
+                        <p className="text-gray-500 italic">
+                          No skills added yet
+                        </p>
                       )}
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex gap-3 pt-6 border-t">
-                  <button
-                    onClick={handleSave}
-                    disabled={
-                      isSaving ||
-                      isUploadingImage ||
-                      isUploadingVideo ||
-                      isUploadingResume
-                    }
-                    className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSaving ||
-                    isUploadingImage ||
-                    isUploadingVideo ||
-                    isUploadingResume ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        {isUploadingImage &&
-                          `Uploading Image... ${uploadProgress}%`}
-                        {isUploadingVideo &&
-                          `Uploading Video... ${uploadProgress}%`}
-                        {isUploadingResume &&
-                          `Uploading Resume... ${uploadProgress}%`}
-                        {isSaving &&
-                          !isUploadingImage &&
-                          !isUploadingVideo &&
-                          !isUploadingResume &&
-                          "Saving..."}
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4" />
-                        Save Changes
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={handleCancel}
-                    disabled={
-                      isSaving ||
-                      isUploadingImage ||
-                      isUploadingVideo ||
-                      isUploadingResume
-                    }
-                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-all duration-200 disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {((user?.role === "developer" && user?.profileImageUrl) ||
-                  (user?.role === "employer" && user?.companyPhoto) ||
-                  profileImagePreview) && (
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">
-                      {user?.role === "developer"
-                        ? "Profile Photo"
-                        : "Company Logo"}
-                    </h3>
-                    <div className="flex justify-center">
-                      <img
-                        src={
-                          user?.role === "developer"
-                            ? user?.profileImageUrl || profileImagePreview
-                            : user?.companyPhoto || profileImagePreview
-                        }
-                        alt={
-                          user?.role === "developer"
-                            ? "Profile"
-                            : "Company Logo"
-                        }
-                        className="w-32 h-32 object-cover rounded-lg border-2 border-gray-200"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {user?.role === "developer" &&
-                  (user?.introVideoUrl || introVideoPreview) && (
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
-                        <Video className="h-5 w-5" />
-                        Introduction Video
-                      </h3>
-                      <div className="bg-gray-100 rounded-lg p-4">
-                        <video
-                          src={user?.introVideoUrl || introVideoPreview}
-                          controls
-                          className="w-full max-h-64 rounded-lg"
-                        />
-                      </div>
                     </div>
                   )}
 
-                {user?.role === "developer" && user?.resumeUrl && (
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
-                      <Upload className="h-5 w-5" />
-                      Resume / CV
-                    </h3>
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <Upload className="w-6 h-6 text-blue-600" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              {user.resumeUrl.split("/").pop()}
-                            </p>
-                            <p className="text-xs text-gray-600">
-                              Resume document uploaded
-                            </p>
+                  {/* Company Dashboard */}
+                  {user?.role === "employer" && (
+                    <div className="border-t pt-6">
+                      <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                        <Building className="h-5 w-5" />
+                        Company Dashboard
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-200">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                              <Briefcase className="w-5 h-5 text-purple-600" />
+                            </div>
+                            <div>
+                              <div className="text-2xl font-bold text-purple-600">
+                                {jobsLoading ? (
+                                  <Loader2 className="h-6 w-6 animate-spin" />
+                                ) : (
+                                  jobsCount
+                                )}
+                              </div>
+                              <div className="text-sm text-purple-700">
+                                Job Opportunities Posted
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <a
-                          href={user.resumeUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors duration-200"
-                        >
-                          <Eye className="w-4 h-4" />
-                          View Resume
-                        </a>
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <User className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <div className="text-2xl font-bold text-blue-600">
+                                Active
+                              </div>
+                              <div className="text-sm text-blue-700">
+                                Account Status
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-4 bg-gray-50 rounded-lg p-4">
+                        <p className="text-gray-600 text-sm">
+                          Manage your company profile and job postings. You can
+                          post new jobs, review applications from developers,
+                          and track your hiring progress.
+                        </p>
                       </div>
                     </div>
-                  </div>
-                )}
-
-                {user?.aboutMe && (
-                  <div className="border-t pt-6">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      About {user?.role === "developer" ? "Me" : "Our Company"}
-                    </h3>
-                    <div
-                      className="prose prose-sm max-w-none bg-gray-50 rounded-lg p-4 border border-gray-200"
-                      dangerouslySetInnerHTML={{ __html: user.aboutMe }}
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    Basic Information
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">
-                        Name
-                      </label>
-                      <p className="text-gray-900 font-medium">{user?.name}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">
-                        Email
-                      </label>
-                      <p className="text-gray-900 font-medium">{user?.email}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">
-                        Account Type
-                      </label>
-                      <p className="text-gray-900 font-medium capitalize">
-                        {user?.role}
-                      </p>
-                    </div>
-                  </div>
+                  )}
                 </div>
-
-                {user?.role === "developer" && (
-                  <div className="border-t pt-6">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
-                      <Code className="h-5 w-5" />
-                      Skills
-                    </h3>
-                    {user?.skills && user.skills.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {user.skills.map((skillId) => (
-                          <span
-                            key={skillId}
-                            className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
-                          >
-                            {getSkillName(skillId) || `Skill ID: ${skillId}`}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-gray-500 italic">
-                        No skills added yet
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {user?.role === "employer" && (
-                  <div className="border-t pt-6">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
-                      <Building className="h-5 w-5" />
-                      Company Dashboard
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-200">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                            <Briefcase className="w-5 h-5 text-purple-600" />
-                          </div>
-                          <div>
-                            <div className="text-2xl font-bold text-purple-600">
-                              {jobsLoading ? (
-                                <Loader2 className="h-6 w-6 animate-spin" />
-                              ) : (
-                                jobsCount
-                              )}
-                            </div>
-                            <div className="text-sm text-purple-700">
-                              Job Opportunities Posted
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <User className="w-5 h-5 text-blue-600" />
-                          </div>
-                          <div>
-                            <div className="text-2xl font-bold text-blue-600">
-                              Active
-                            </div>
-                            <div className="text-sm text-blue-700">
-                              Account Status
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 bg-gray-50 rounded-lg p-4">
-                      <p className="text-gray-600 text-sm">
-                        Manage your company profile and job postings. You can
-                        post new jobs, review applications from developers, and
-                        track your hiring progress.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* ✅ VIDEO MODAL */}
+      {showVideoModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4 animate-fadeIn"
+          onClick={closeVideoModal}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden animate-slideUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                  <Video className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Introduction Video
+                  </h3>
+                  <p className="text-sm text-gray-600">{user?.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={closeVideoModal}
+                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors"
+                title="Close (ESC)"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 bg-gray-900">
+              <video
+                src={user?.introVideoUrl}
+                controls
+                autoPlay
+                className="w-full rounded-lg shadow-lg"
+                style={{ maxHeight: "70vh" }}
+              >
+                Your browser does not support the video tag.
+              </video>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
+              <p className="text-sm text-gray-600">
+                💡 Tip: Press{" "}
+                <kbd className="px-2 py-1 bg-gray-200 rounded text-xs font-mono">
+                  ESC
+                </kbd>{" "}
+                to close
+              </p>
+              <button
+                onClick={closeVideoModal}
+                className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ RESUME MODAL */}
+      {showResumeModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4 animate-fadeIn"
+          onClick={closeResumeModal}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden animate-slideUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Resume / CV
+                  </h3>
+                  <p className="text-sm text-gray-600">{user?.name}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={user?.resumeUrl}
+                  download
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+                  title="Download Resume"
+                >
+                  <Download className="w-4 h-4" />
+                  Download
+                </a>
+                <button
+                  onClick={closeResumeModal}
+                  className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors"
+                  title="Close (ESC)"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 bg-gray-100 h-[calc(90vh-180px)] overflow-auto">
+              <iframe
+                src={user?.resumeUrl}
+                className="w-full h-full rounded-lg shadow-lg bg-white"
+                title={`${user?.name}'s Resume`}
+              />
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
+              <p className="text-sm text-gray-600">
+                💡 Tip: Press{" "}
+                <kbd className="px-2 py-1 bg-gray-200 rounded text-xs font-mono">
+                  ESC
+                </kbd>{" "}
+                to close
+              </p>
+              <button
+                onClick={closeResumeModal}
+                className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        @keyframes slideUp {
+          from {
+            transform: translateY(50px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+
+        .animate-fadeIn {
+          animation: fadeIn 0.2s ease-out;
+        }
+
+        .animate-slideUp {
+          animation: slideUp 0.3s ease-out;
+        }
+
+        kbd {
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+      `}</style>
+    </>
   );
 };
 
