@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../contexts/AuthContext";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, X, Search } from "lucide-react";
 
 const AddJobPage = ({ addJobSubmit }) => {
   const [title, setTitle] = useState("");
@@ -17,8 +17,33 @@ const AddJobPage = ({ addJobSubmit }) => {
   const [emailError, setEmailError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Skills state
+  const [allSkills, setAllSkills] = useState([]);
+  const [selectedSkills, setSelectedSkills] = useState([]);
+  const [skillSearchTerm, setSkillSearchTerm] = useState("");
+  const [showSkillDropdown, setShowSkillDropdown] = useState(false);
+  const [isLoadingSkills, setIsLoadingSkills] = useState(true);
+
   const { user, isEmployer } = useAuth();
   const navigate = useNavigate();
+
+  // Fetch all available skills on component mount
+  useEffect(() => {
+    const fetchSkills = async () => {
+      try {
+        const response = await fetch("/api/skills");
+        const skillsData = await response.json();
+        setAllSkills(skillsData);
+      } catch (error) {
+        console.error("Error fetching skills:", error);
+        toast.error("Failed to load skills");
+      } finally {
+        setIsLoadingSkills(false);
+      }
+    };
+
+    fetchSkills();
+  }, []);
 
   // Redirect if not an employer (extra security check)
   if (!isEmployer()) {
@@ -34,8 +59,26 @@ const AddJobPage = ({ addJobSubmit }) => {
     );
   }
 
+  // Filter skills based on search term and exclude already selected
+  const filteredSkills = allSkills.filter(
+    (skill) =>
+      skill.name.toLowerCase().includes(skillSearchTerm.toLowerCase()) &&
+      !selectedSkills.some((selected) => selected.id === skill.id)
+  );
+
+  // Add skill to selected list
+  const handleAddSkill = (skill) => {
+    setSelectedSkills([...selectedSkills, skill]);
+    setSkillSearchTerm("");
+    setShowSkillDropdown(false);
+  };
+
+  // Remove skill from selected list
+  const handleRemoveSkill = (skillId) => {
+    setSelectedSkills(selectedSkills.filter((skill) => skill.id !== skillId));
+  };
+
   const validateEmail = (email) => {
-    // More comprehensive email regex
     const regex =
       /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
     return regex.test(email);
@@ -48,50 +91,40 @@ const AddJobPage = ({ addJobSubmit }) => {
 
     const trimmedEmail = email.trim();
 
-    // Check for @ symbol
     if (!trimmedEmail.includes("@")) {
       return "Email must contain an @ symbol";
     }
 
-    // Split by @ to check parts
     const parts = trimmedEmail.split("@");
 
-    // Too many @ symbols
     if (parts.length !== 2) {
       return "Email must contain exactly one @ symbol";
     }
 
     const [localPart, domainPart] = parts;
 
-    // Check local part (before @)
     if (!localPart || localPart.length === 0) {
       return "Email must have text before the @ symbol";
     }
 
-    // Check domain part (after @)
     if (!domainPart || domainPart.length === 0) {
       return "Email must have a domain after the @ symbol";
     }
 
-    // Check for dot in domain
     if (!domainPart.includes(".")) {
       return "Domain must contain a dot (e.g., .com, .org)";
     }
 
-    // Split domain by dots
     const domainParts = domainPart.split(".");
 
-    // Check if domain has proper structure
     if (domainParts.length < 2) {
       return "Domain must have at least one dot (e.g., .com, .org)";
     }
 
-    // Check if any domain part is empty
     if (domainParts.some((part) => part.length === 0)) {
       return "Domain cannot have empty parts (check your dots)";
     }
 
-    // Check if domain starts or ends with dot/hyphen
     if (domainPart.startsWith(".") || domainPart.endsWith(".")) {
       return "Domain cannot start or end with a dot";
     }
@@ -100,43 +133,37 @@ const AddJobPage = ({ addJobSubmit }) => {
       return "Domain cannot start or end with a hyphen";
     }
 
-    // Check for valid characters in local part
     const validLocalRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+$/;
     if (!validLocalRegex.test(localPart)) {
       return "Email contains invalid characters before @";
     }
 
-    // Check for valid characters in domain
     const validDomainRegex = /^[a-zA-Z0-9.-]+$/;
     if (!validDomainRegex.test(domainPart)) {
       return "Domain contains invalid characters";
     }
 
-    // Check if the last part (TLD) is at least 2 characters
     const tld = domainParts[domainParts.length - 1];
     if (tld.length < 2) {
       return "Domain extension must be at least 2 characters (e.g., .com, .org)";
     }
 
-    // Check for consecutive dots
     if (trimmedEmail.includes("..")) {
       return "Email cannot contain consecutive dots";
     }
 
-    // If all checks pass but still invalid, use generic message
     if (!validateEmail(trimmedEmail)) {
       return "Please enter a valid email address";
     }
 
-    return ""; // Valid email
+    return "";
   };
 
-  // Real-time email validation on blur (when user clicks away)
   const handleEmailBlur = () => {
     const email = contactEmail.trim();
 
     if (email === "") {
-      setEmailError(""); // Don't show error for empty field on blur
+      setEmailError("");
       return;
     }
 
@@ -144,12 +171,10 @@ const AddJobPage = ({ addJobSubmit }) => {
     setEmailError(detailedError);
   };
 
-  // Real-time email validation on input
   const handleEmailChange = (e) => {
     const email = e.target.value;
     setContactEmail(email);
 
-    // Clear error when user starts typing, then validate if there's already an error or field has content
     if (emailError || email.trim().length > 0) {
       const trimmedEmail = email.trim();
 
@@ -166,7 +191,6 @@ const AddJobPage = ({ addJobSubmit }) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Validate email before submission
     if (!contactEmail.trim()) {
       setEmailError("Email is required");
       setIsSubmitting(false);
@@ -181,24 +205,24 @@ const AddJobPage = ({ addJobSubmit }) => {
     }
 
     const newJob = {
-      id: Date.now().toString(), // Simple ID generation
+      id: Date.now().toString(),
       title,
       type,
       location,
       description,
       salary,
-      employerId: user.id, // Add the employer ID automatically
+      employerId: user.id,
+      skills: selectedSkills.map((skill) => skill.id), // Add selected skill IDs
       company: {
         name: companyName,
         description: companyDescription,
         contactEmail: contactEmail.trim(),
         contactPhone,
       },
-      createdAt: new Date().toISOString(), // Add timestamp
+      createdAt: new Date().toISOString(),
     };
 
     try {
-      // Call the addJobSubmit function passed as prop
       await addJobSubmit(newJob);
       toast.success("Job Added Successfully");
       navigate("/jobs");
@@ -291,6 +315,80 @@ const AddJobPage = ({ addJobSubmit }) => {
               ></textarea>
               <p className="text-sm text-gray-500 mt-1">
                 Provide detailed information to attract the right candidates
+              </p>
+            </div>
+
+            {/* Required Skills Section */}
+            <div className="mb-4">
+              <label className="block text-gray-700 font-bold mb-2">
+                Required Skills
+              </label>
+              <div className="relative">
+                <div className="flex items-center border rounded px-3 py-2 bg-white">
+                  <Search className="h-4 w-4 text-gray-400 mr-2" />
+                  <input
+                    type="text"
+                    className="w-full outline-none"
+                    placeholder="Search and add skills (e.g., React, JavaScript)"
+                    value={skillSearchTerm}
+                    onChange={(e) => {
+                      setSkillSearchTerm(e.target.value);
+                      setShowSkillDropdown(true);
+                    }}
+                    onFocus={() => setShowSkillDropdown(true)}
+                  />
+                </div>
+
+                {/* Skills Dropdown */}
+                {showSkillDropdown && skillSearchTerm && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {isLoadingSkills ? (
+                      <div className="p-4 text-center text-gray-500">
+                        Loading skills...
+                      </div>
+                    ) : filteredSkills.length > 0 ? (
+                      filteredSkills.map((skill) => (
+                        <button
+                          key={skill.id}
+                          type="button"
+                          className="w-full text-left px-4 py-2 hover:bg-indigo-50 transition-colors"
+                          onClick={() => handleAddSkill(skill)}
+                        >
+                          {skill.name}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-gray-500">
+                        No skills found
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Selected Skills Display */}
+              {selectedSkills.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {selectedSkills.map((skill) => (
+                    <span
+                      key={skill.id}
+                      className="inline-flex items-center gap-1 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-medium"
+                    >
+                      {skill.name}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSkill(skill.id)}
+                        className="hover:bg-indigo-200 rounded-full p-0.5 transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <p className="text-sm text-gray-500 mt-2">
+                Add skills to help match with qualified candidates (
+                {selectedSkills.length} selected)
               </p>
             </div>
 

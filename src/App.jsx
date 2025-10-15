@@ -16,6 +16,7 @@ import EditJobPage from "./pages/EditJobPage";
 import Login from "./components/Login";
 import Signup from "./components/signup";
 import MyApplications from "./pages/MyApplications";
+import Recommendations from "./pages/Recommendations";
 import Profile from "./components/Profile";
 import EmployerProfile from "./components/EmployerProfile";
 const App = () => {
@@ -78,6 +79,7 @@ const router = createBrowserRouter(
         />
 
         <Route path="myapplications" element={<MyApplications />} />
+        <Route path="recommendations" element={<Recommendations />} />
 
         {/* Catch-all */}
         <Route path="*" element={<NotFoundPage />} />

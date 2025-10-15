@@ -173,12 +173,18 @@
       "description": "Join our team as a Front-End Developer in sunny Miami, FL. We are looking for a motivated individual with a passion for crafting beautiful and responsive web applications. Experience with UI/UX design principles and a strong attention to detail are highly desirable.",
       "salary": "$70K - $80K",
       "employerId": "2",
+      "skills": [
+        "1758206221329",
+        "2",
+        "11"
+      ],
       "company": {
         "name": "Veneer Solutions",
         "description": "Veneer Solutions is a creative agency specializing in digital design and development. Our team is dedicated to pushing the boundaries of creativity and innovation to deliver exceptional results for our clients.",
         "contactEmail": "contact@gmail.in",
         "contactPhone": "555-555-5555"
-      }
+      },
+      "updatedAt": "2025-10-15T14:31:30.190Z"
     },
     {
       "id": "3",
@@ -317,6 +323,27 @@
         "contactPhone": "555-555-2222"
       },
       "createdAt": "2025-08-21T05:50:01.020Z"
+    },
+    {
+      "id": "1760538435306",
+      "title": "SDE intern",
+      "type": "Full-Time",
+      "location": "Hyderabad",
+      "description": "Required React knowledge along with backend handling",
+      "salary": "Under $50K",
+      "employerId": "2",
+      "skills": [
+        "6",
+        "1758206221329",
+        "2"
+      ],
+      "company": {
+        "name": "TCS",
+        "description": "Hire people with dverse backgrounds",
+        "contactEmail": "tcs@gmail.com",
+        "contactPhone": "1234567890"
+      },
+      "createdAt": "2025-10-15T14:27:15.306Z"
     }
   ],
   "applications": [
@@ -377,6 +404,16 @@
       "applicantName": "John Developer",
       "applicantEmail": "john@dev.com",
       "appliedAt": "2025-08-31T06:32:59.561Z",
+      "status": "pending"
+    },
+    {
+      "id": "mgs3jzvi0as3fa2cxuic",
+      "jobId": "1755338670402",
+      "employerId": "2",
+      "applicantId": "1",
+      "applicantName": "John Developer",
+      "applicantEmail": "john@dev.com",
+      "appliedAt": "2025-10-15T14:39:12.222Z",
       "status": "pending"
     }
   ],

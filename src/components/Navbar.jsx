@@ -54,6 +54,11 @@ const Navbar = () => {
                       My applications
                     </NavLink>
                   )}
+                  {isDeveloper() && (
+                    <NavLink to="/recommendations" className={linkClass}>
+                      Job Recommendations
+                    </NavLink>
+                  )}
                 </div>
               </div>
             )}
