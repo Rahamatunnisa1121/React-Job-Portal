@@ -34,6 +34,8 @@ import {
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 
+
+
 // AWS SDK v3 Configuration using environment variables
 const s3Client = new S3Client({
   region: import.meta.env.VITE_AWS_REGION,
@@ -79,6 +81,11 @@ const Profile = () => {
   // ✅ Modal states
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [showVideoModal, setShowVideoModal] = useState(false);
+
+  //draft states
+  const [hasDraft, setHasDraft] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [draftData, setDraftData] = useState(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -130,41 +137,53 @@ const Profile = () => {
     document.body.style.overflow = "auto";
   };
 
-  useEffect(() => {
-    if (user) {
-      setFormData({
-        name: user.name || "",
-        email: user.email || "",
-        password: "",
-        confirmPassword: "",
-        role: user.role || "",
-        skills: user.skills || [],
-        profileImageUrl: user.profileImageUrl || "",
-        introVideoUrl: user.introVideoUrl || "",
-        resumeUrl: user.resumeUrl || "",
-        aboutMe: user.aboutMe || "",
-      });
+useEffect(() => {
+  if (user) {
+    // Check if user has draft data
+    const hasSavedDraft = user.draft && Object.keys(user.draft).length > 0;
+    setHasDraft(hasSavedDraft);
+    setDraftData(user.draft);
 
-      if (user.role === "developer" && user.profileImageUrl) {
-        setProfileImagePreview(user.profileImageUrl);
-      } else if (user.role === "employer" && user.companyPhoto) {
-        setProfileImagePreview(user.companyPhoto);
-      }
+    // Load either draft or published data when editing
+    const dataToLoad = hasSavedDraft && isEditing ? user.draft : user;
 
-      if (user.introVideoUrl) {
-        setIntroVideoPreview(user.introVideoUrl);
-      }
-      if (user.resumeUrl) {
-        setResumeFileName(user.resumeUrl.split("/").pop());
-      }
+    setFormData({
+      name: dataToLoad.name || "",
+      email: dataToLoad.email || "",
+      password: "",
+      confirmPassword: "",
+      role: dataToLoad.role || user.role || "",
+      skills: dataToLoad.skills || [],
+      profileImageUrl: dataToLoad.profileImageUrl || "",
+      introVideoUrl: dataToLoad.introVideoUrl || "",
+      resumeUrl: dataToLoad.resumeUrl || "",
+      aboutMe: dataToLoad.aboutMe || "",
+    });
+
+    // Set preview images from draft or published
+    if (user.role === "developer" && dataToLoad.profileImageUrl) {
+      setProfileImagePreview(dataToLoad.profileImageUrl);
+    } else if (
+      user.role === "employer" &&
+      (dataToLoad.companyPhoto || user.companyPhoto)
+    ) {
+      setProfileImagePreview(dataToLoad.companyPhoto || user.companyPhoto);
     }
 
-    if (user?.role === "developer") {
-      fetchSkills();
-    } else if (user?.role === "employer") {
-      fetchJobsCount();
+    if (dataToLoad.introVideoUrl) {
+      setIntroVideoPreview(dataToLoad.introVideoUrl);
     }
-  }, [user]);
+    if (dataToLoad.resumeUrl) {
+      setResumeFileName(dataToLoad.resumeUrl.split("/").pop());
+    }
+  }
+
+  if (user?.role === "developer") {
+    fetchSkills();
+  } else if (user?.role === "employer") {
+    fetchJobsCount();
+  }
+}, [user, isEditing]);
 
   const fetchSkills = async () => {
     setSkillsLoading(true);
@@ -180,6 +199,301 @@ const Profile = () => {
       setSkillsLoading(false);
     }
   };
+
+  // New function: Save as Draft
+const handleSaveAsDraft = async () => {
+  setIsSavingDraft(true);
+  setMessage({ type: "", text: "" });
+
+  try {
+    let profileImageUrl = formData.profileImageUrl;
+    let introVideoUrl = formData.introVideoUrl;
+    let resumeUrl = formData.resumeUrl;
+
+    // Upload files if new ones are selected
+    if (profileImage) {
+      try {
+        profileImageUrl = await uploadProfileImage();
+      } catch (error) {
+        setIsSavingDraft(false);
+        return;
+      }
+    }
+
+    if (introVideo && formData.role === "developer") {
+      try {
+        introVideoUrl = await uploadIntroVideo();
+      } catch (error) {
+        setIsSavingDraft(false);
+        return;
+      }
+    }
+
+    if (resume && formData.role === "developer") {
+      try {
+        resumeUrl = await uploadResume();
+      } catch (error) {
+        setIsSavingDraft(false);
+        return;
+      }
+    }
+
+    // Prepare draft data object
+    const draftObject = {
+      name: formData.name.trim(),
+      email: formData.email.trim(),
+      role: formData.role,
+    };
+
+    // Add password only if changed
+    if (formData.password && formData.password.trim()) {
+      draftObject.password = formData.password;
+    }
+
+    // Add role-specific fields
+    if (formData.role === "developer") {
+      draftObject.skills = formData.skills;
+      draftObject.profileImageUrl = profileImageUrl;
+      draftObject.introVideoUrl = introVideoUrl;
+      draftObject.resumeUrl = resumeUrl;
+      draftObject.aboutMe = formData.aboutMe;
+    }
+    if (formData.role === "employer") {
+      draftObject.companyPhoto = profileImageUrl;
+      draftObject.aboutMe = formData.aboutMe;
+    }
+
+    // First, get the current user data
+    const getCurrentUser = await fetch(`/api/users/${user.id}`);
+    if (!getCurrentUser.ok) throw new Error("Failed to fetch current user");
+    const currentUser = await getCurrentUser.json();
+
+    // Update user with draft data using PATCH
+    const response = await fetch(`/api/users/${user.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...currentUser, // Keep all existing fields
+        draft: draftObject, // Add/update draft
+      }),
+    });
+
+    if (!response.ok) throw new Error("Failed to save draft");
+    const updatedUser = await response.json();
+
+    // Update local user context with draft
+    updateUser(updatedUser);
+    setHasDraft(true);
+    setDraftData(updatedUser.draft);
+
+    // Clear file inputs but keep form data
+    setProfileImage(null);
+    setIntroVideo(null);
+    setResume(null);
+
+    // Update previews
+    setProfileImagePreview(profileImageUrl || "");
+    setIntroVideoPreview(introVideoUrl || "");
+    if (resumeUrl) setResumeFileName(resumeUrl.split("/").pop());
+
+    setMessage({
+      type: "success",
+      text: "✅ Draft saved successfully! Your changes are not yet visible to others.",
+    });
+  } catch (error) {
+    console.error("Error saving draft:", error);
+    setMessage({
+      type: "error",
+      text: "Failed to save draft. Please try again.",
+    });
+  } finally {
+    setIsSavingDraft(false);
+  }
+};
+
+  // New function: Discard Draft
+const handleDiscardDraft = async () => {
+  if (
+    !window.confirm(
+      "Are you sure you want to discard your draft? This cannot be undone."
+    )
+  ) {
+    return;
+  }
+
+  try {
+    // Get current user data
+    const getCurrentUser = await fetch(`/api/users/${user.id}`);
+    if (!getCurrentUser.ok) throw new Error("Failed to fetch current user");
+    const currentUser = await getCurrentUser.json();
+
+    // Remove draft field
+    const { draft, ...userWithoutDraft } = currentUser;
+
+    // Update user without draft
+    const response = await fetch(`/api/users/${user.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(userWithoutDraft),
+    });
+
+    if (!response.ok) throw new Error("Failed to discard draft");
+    const updatedUser = await response.json();
+
+    updateUser(updatedUser);
+    setHasDraft(false);
+    setDraftData(null);
+
+    // Reset form to published data
+    setFormData({
+      name: user.name || "",
+      email: user.email || "",
+      password: "",
+      confirmPassword: "",
+      role: user.role || "",
+      skills: user.skills || [],
+      profileImageUrl: user.profileImageUrl || "",
+      introVideoUrl: user.introVideoUrl || "",
+      resumeUrl: user.resumeUrl || "",
+      aboutMe: user.aboutMe || "",
+    });
+
+    setProfileImage(null);
+    setIntroVideo(null);
+    setResume(null);
+    setProfileImagePreview(user.profileImageUrl || user.companyPhoto || "");
+    setIntroVideoPreview(user.introVideoUrl || "");
+    setResumeFileName(user.resumeUrl ? user.resumeUrl.split("/").pop() : "");
+
+    setMessage({ type: "success", text: "Draft discarded successfully!" });
+  } catch (error) {
+    console.error("Error discarding draft:", error);
+    setMessage({
+      type: "error",
+      text: "Failed to discard draft. Please try again.",
+    });
+  }
+};
+
+    const handleSave = async () => {
+      const validationError = validateForm();
+      if (validationError) {
+        setMessage({ type: "error", text: validationError });
+        return;
+      }
+
+      setIsSaving(true);
+      setMessage({ type: "", text: "" });
+
+      try {
+        let profileImageUrl = formData.profileImageUrl;
+        let introVideoUrl = formData.introVideoUrl;
+        let resumeUrl = formData.resumeUrl;
+
+        if (profileImage) {
+          try {
+            profileImageUrl = await uploadProfileImage();
+          } catch (error) {
+            setIsSaving(false);
+            return;
+          }
+        }
+
+        if (introVideo && formData.role === "developer") {
+          try {
+            introVideoUrl = await uploadIntroVideo();
+          } catch (error) {
+            setIsSaving(false);
+            return;
+          }
+        }
+
+        if (resume && formData.role === "developer") {
+          try {
+            resumeUrl = await uploadResume();
+          } catch (error) {
+            setIsSaving(false);
+            return;
+          }
+        }
+
+        // Get current user data first
+        const getCurrentUser = await fetch(`/api/users/${user.id}`);
+        if (!getCurrentUser.ok) throw new Error("Failed to fetch current user");
+        const currentUser = await getCurrentUser.json();
+
+        const updateData = {
+          ...currentUser,
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          role: formData.role,
+        };
+
+        // Remove draft field (publish changes)
+        delete updateData.draft;
+
+        if (formData.password && formData.password.trim()) {
+          updateData.password = formData.password;
+        }
+
+        if (formData.role === "developer") {
+          updateData.skills = formData.skills;
+          updateData.profileImageUrl = profileImageUrl;
+          updateData.introVideoUrl = introVideoUrl;
+          updateData.resumeUrl = resumeUrl;
+          updateData.aboutMe = formData.aboutMe;
+        }
+        if (formData.role === "employer") {
+          updateData.companyPhoto = profileImageUrl;
+          updateData.aboutMe = formData.aboutMe;
+        }
+
+        const response = await fetch(`/api/users/${user.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updateData),
+        });
+
+        if (!response.ok) throw new Error("Failed to update profile");
+        const updatedUser = await response.json();
+
+        updateUser(updatedUser);
+        setHasDraft(false);
+        setDraftData(null);
+
+        setFormData((prev) => ({
+          ...prev,
+          profileImageUrl: profileImageUrl,
+          introVideoUrl: introVideoUrl,
+          resumeUrl: resumeUrl,
+          aboutMe: formData.aboutMe,
+          password: "",
+          confirmPassword: "",
+        }));
+
+        setProfileImage(null);
+        setIntroVideo(null);
+        setResume(null);
+
+        setProfileImagePreview(profileImageUrl || "");
+        setIntroVideoPreview(introVideoUrl || "");
+        if (resumeUrl) setResumeFileName(resumeUrl.split("/").pop());
+
+        setMessage({
+          type: "success",
+          text: "✨ Profile published successfully!",
+        });
+        setIsEditing(false);
+      } catch (error) {
+        console.error("Error updating profile:", error);
+        setMessage({
+          type: "error",
+          text: "Failed to update profile. Please try again.",
+        });
+      } finally {
+        setIsSaving(false);
+      }
+    };
 
   const fetchJobsCount = async () => {
     setJobsLoading(true);
@@ -527,113 +841,6 @@ const Profile = () => {
     return null;
   };
 
-  const handleSave = async () => {
-    const validationError = validateForm();
-    if (validationError) {
-      setMessage({ type: "error", text: validationError });
-      return;
-    }
-
-    setIsSaving(true);
-    setMessage({ type: "", text: "" });
-
-    try {
-      let profileImageUrl = formData.profileImageUrl;
-      let introVideoUrl = formData.introVideoUrl;
-      let resumeUrl = formData.resumeUrl;
-
-      if (profileImage) {
-        try {
-          profileImageUrl = await uploadProfileImage();
-        } catch (error) {
-          setIsSaving(false);
-          return;
-        }
-      }
-
-      if (introVideo && formData.role === "developer") {
-        try {
-          introVideoUrl = await uploadIntroVideo();
-        } catch (error) {
-          setIsSaving(false);
-          return;
-        }
-      }
-
-      if (resume && formData.role === "developer") {
-        try {
-          resumeUrl = await uploadResume();
-        } catch (error) {
-          setIsSaving(false);
-          return;
-        }
-      }
-
-      const updateData = {
-        id: user.id,
-        name: formData.name.trim(),
-        email: formData.email.trim(),
-        role: formData.role,
-      };
-
-      if (formData.password && formData.password.trim()) {
-        updateData.password = formData.password;
-      }
-
-      if (formData.role === "developer") {
-        updateData.skills = formData.skills;
-        updateData.profileImageUrl = profileImageUrl;
-        updateData.introVideoUrl = introVideoUrl;
-        updateData.resumeUrl = resumeUrl;
-        updateData.aboutMe = formData.aboutMe;
-      }
-      if (formData.role === "employer") {
-        updateData.companyPhoto = profileImageUrl;
-        updateData.aboutMe = formData.aboutMe;
-      }
-
-      const response = await fetch(`/api/users/${user.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updateData),
-      });
-
-      if (!response.ok) throw new Error("Failed to update profile");
-      const updatedUser = await response.json();
-
-      updateUser(updatedUser);
-
-      setFormData((prev) => ({
-        ...prev,
-        profileImageUrl: profileImageUrl,
-        introVideoUrl: introVideoUrl,
-        resumeUrl: resumeUrl,
-        aboutMe: formData.aboutMe,
-        password: "",
-        confirmPassword: "",
-      }));
-
-      setProfileImage(null);
-      setIntroVideo(null);
-      setResume(null);
-
-      setProfileImagePreview(profileImageUrl || "");
-      setIntroVideoPreview(introVideoUrl || "");
-      if (resumeUrl) setResumeFileName(resumeUrl.split("/").pop());
-
-      setMessage({ type: "success", text: "Profile updated successfully!" });
-      setIsEditing(false);
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      setMessage({
-        type: "error",
-        text: "Failed to update profile. Please try again.",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleCancel = () => {
     setFormData({
       name: user.name || "",
@@ -829,7 +1036,6 @@ const Profile = () => {
                       </div>
                     </div>
                   </div>
-
                   {/* Video Upload */}
                   {formData.role === "developer" && (
                     <div>
@@ -894,7 +1100,6 @@ const Profile = () => {
                       </div>
                     </div>
                   )}
-
                   {/* Resume Upload */}
                   {formData.role === "developer" && (
                     <div>
@@ -986,7 +1191,6 @@ const Profile = () => {
                       </div>
                     </div>
                   )}
-
                   {/* About Me Section */}
                   <div className="space-y-4">
                     <div className="border-t pt-4">
@@ -1048,7 +1252,6 @@ const Profile = () => {
                       </p>
                     </div>
                   </div>
-
                   {/* Name Field */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1068,7 +1271,6 @@ const Profile = () => {
                       />
                     </div>
                   </div>
-
                   {/* Email Field */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1088,7 +1290,6 @@ const Profile = () => {
                       />
                     </div>
                   </div>
-
                   {/* Password Section */}
                   <div className="space-y-4">
                     <div className="border-t pt-4">
@@ -1164,7 +1365,6 @@ const Profile = () => {
                       </div>
                     )}
                   </div>
-
                   {/* Skills Management */}
                   {formData.role === "developer" && (
                     <div className="space-y-4">
@@ -1284,56 +1484,115 @@ const Profile = () => {
                       </div>
                     </div>
                   )}
-
                   {/* Action Buttons */}
-                  <div className="flex gap-3 pt-6 border-t">
-                    <button
-                      onClick={handleSave}
-                      disabled={
-                        isSaving ||
-                        isUploadingImage ||
-                        isUploadingVideo ||
-                        isUploadingResume
-                      }
-                      className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isSaving ||
-                      isUploadingImage ||
-                      isUploadingVideo ||
-                      isUploadingResume ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          {isUploadingImage &&
-                            `Uploading Image... ${uploadProgress}%`}
-                          {isUploadingVideo &&
-                            `Uploading Video... ${uploadProgress}%`}
-                          {isUploadingResume &&
-                            `Uploading Resume... ${uploadProgress}%`}
-                          {isSaving &&
-                            !isUploadingImage &&
-                            !isUploadingVideo &&
-                            !isUploadingResume &&
-                            "Saving..."}
-                        </>
-                      ) : (
-                        <>
-                          <Save className="h-4 w-4" />
-                          Save Changes
-                        </>
+                  <div className="space-y-3 pt-6 border-t">
+                    {/* Draft indicator */}
+                    {hasDraft && (
+                      <div className="w-full p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                          <span className="text-sm text-amber-700 font-medium">
+                            📝 You have unpublished draft changes that only you
+                            can see
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-3">
+                      {/* Save as Draft Button */}
+                      <button
+                        onClick={handleSaveAsDraft}
+                        disabled={
+                          isSavingDraft ||
+                          isSaving ||
+                          isUploadingImage ||
+                          isUploadingVideo ||
+                          isUploadingResume
+                        }
+                        className="flex-1 min-w-[160px] flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+                      >
+                        {isSavingDraft ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Saving Draft...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4" />
+                            Save as Draft
+                          </>
+                        )}
+                      </button>
+
+                      {/* Publish Button */}
+                      <button
+                        onClick={handleSave}
+                        disabled={
+                          isSaving ||
+                          isSavingDraft ||
+                          isUploadingImage ||
+                          isUploadingVideo ||
+                          isUploadingResume
+                        }
+                        className="flex-1 min-w-[160px] flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+                      >
+                        {isSaving ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            {isUploadingImage &&
+                              `Uploading Image... ${uploadProgress}%`}
+                            {isUploadingVideo &&
+                              `Uploading Video... ${uploadProgress}%`}
+                            {isUploadingResume &&
+                              `Uploading Resume... ${uploadProgress}%`}
+                            {!isUploadingImage &&
+                              !isUploadingVideo &&
+                              !isUploadingResume &&
+                              "Publishing..."}
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-4 w-4" />
+                            {hasDraft ? "Publish Changes" : "Save & Publish"}
+                          </>
+                        )}
+                      </button>
+
+                      {/* Cancel Button */}
+                      <button
+                        onClick={handleCancel}
+                        disabled={
+                          isSaving ||
+                          isSavingDraft ||
+                          isUploadingImage ||
+                          isUploadingVideo ||
+                          isUploadingResume
+                        }
+                        className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-all duration-200 disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+
+                      {/* Discard Draft Button (only show if draft exists) */}
+                      {hasDraft && (
+                        <button
+                          onClick={handleDiscardDraft}
+                          disabled={
+                            isSaving ||
+                            isSavingDraft ||
+                            isUploadingImage ||
+                            isUploadingVideo ||
+                            isUploadingResume
+                          }
+                          className="px-4 py-3 border-2 border-red-300 text-red-700 rounded-lg font-medium hover:bg-red-50 transition-all duration-200 disabled:opacity-50 flex items-center gap-2"
+                          title="Discard draft and revert to published version"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Discard Draft
+                        </button>
                       )}
-                    </button>
-                    <button
-                      onClick={handleCancel}
-                      disabled={
-                        isSaving ||
-                        isUploadingImage ||
-                        isUploadingVideo ||
-                        isUploadingResume
-                      }
-                      className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-all duration-200 disabled:opacity-50"
-                    >
-                      Cancel
-                    </button>
+                    </div>
                   </div>
                 </div>
               ) : (

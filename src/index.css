@@ -1,3 +1,63 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Better Table Styles */
+.ql-better-table-wrapper {
+  overflow-x: auto;
+}
+
+.ql-better-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 10px 0;
+}
+
+.ql-better-table td,
+.ql-better-table th {
+  border: 1px solid #ddd;
+  padding: 8px;
+  min-width: 50px;
+}
+
+.ql-better-table tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+.ql-better-table tr:hover {
+  background-color: #f3f4f6;
+}
+
+.ql-better-table th {
+  background-color: #3b82f6;
+  color: white;
+  font-weight: bold;
+  text-align: left;
+}
+
+/* Table operation menu styling */
+.qlbt-operation-menu {
+  background: white;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+.qlbt-operation-menu-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.qlbt-operation-menu-item:hover {
+  background-color: #f3f4f6;
+}
+
+/* Toolbar table buttons */
+.ql-toolbar .ql-better-table {
+  width: auto !important;
+}
+
+.ql-snow .ql-picker.ql-better-table .ql-picker-label::before {
+  content: "Table";
+}
