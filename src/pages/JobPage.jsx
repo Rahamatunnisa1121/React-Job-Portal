@@ -3,7 +3,7 @@ import { FaArrowLeft, FaMapMarker, FaBriefcase } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { useAuth } from "../contexts/AuthContext";
 import { useState, useEffect } from "react";
-import { Video, FileText, User, X, Download } from "lucide-react";
+import { Video, FileText, User, X, Download, Code } from "lucide-react";
 import defaultProfile from "../assets/images/profilephoto.jpg";
 
 const JobPage = ({ deleteJob }) => {
@@ -11,11 +11,17 @@ const JobPage = ({ deleteJob }) => {
   const [isApplying, setIsApplying] = useState(false);
   const [applications, setApplications] = useState([]);
   const [alreadyApplied, setAlreadyApplied] = useState(false);
+  const [currentApplicationId, setCurrentApplicationId] = useState(null);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [showApplications, setShowApplications] = useState(false);
   const [loadingApplications, setLoadingApplications] = useState(false);
   const [expandedAboutMe, setExpandedAboutMe] = useState({});
 
-  // ✅ Modal states
+  // ✅ NEW: Job Skills State
+  const [jobSkills, setJobSkills] = useState([]);
+  const [skillsLoading, setSkillsLoading] = useState(true);
+
+  // Modal states
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [currentVideoUrl, setCurrentVideoUrl] = useState("");
@@ -26,7 +32,44 @@ const JobPage = ({ deleteJob }) => {
   const { id } = useParams();
   const job = useLoaderData();
 
-  // ✅ Close modal on ESC key
+  // ✅ NEW: Fetch job skills
+  useEffect(() => {
+    const fetchJobSkills = async () => {
+      if (!job.skills || job.skills.length === 0) {
+        setSkillsLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/skills");
+        if (!response.ok) throw new Error("Failed to fetch skills");
+        const allSkills = await response.json();
+
+        // Map job skill IDs to skill names
+        const matchedSkills = job.skills
+          .map((skillId) => {
+            const skill = allSkills.find(
+              (s) =>
+                String(s.id) === String(skillId) ||
+                Number(s.id) === Number(skillId)
+            );
+            return skill ? skill.name : null;
+          })
+          .filter(Boolean); // Remove null values
+
+        setJobSkills(matchedSkills);
+      } catch (error) {
+        console.error("Error fetching job skills:", error);
+        toast.error("Failed to load job skills");
+      } finally {
+        setSkillsLoading(false);
+      }
+    };
+
+    fetchJobSkills();
+  }, [job]);
+
+  // Close modal on ESC key
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === "Escape") {
@@ -38,7 +81,7 @@ const JobPage = ({ deleteJob }) => {
     return () => window.removeEventListener("keydown", handleEsc);
   }, []);
 
-  // ✅ Check if already applied
+  // Check if already applied
   useEffect(() => {
     const checkIfApplied = async () => {
       try {
@@ -46,11 +89,17 @@ const JobPage = ({ deleteJob }) => {
         if (!response.ok) throw new Error("Failed to fetch applications");
         const data = await response.json();
 
-        const applied = data.some(
+        const application = data.find(
           (app) => app.jobId === job.id && app.applicantId === user.id
         );
 
-        setAlreadyApplied(applied);
+        if (application) {
+          setAlreadyApplied(true);
+          setCurrentApplicationId(application.id);
+        } else {
+          setAlreadyApplied(false);
+          setCurrentApplicationId(null);
+        }
       } catch (error) {
         console.error("Error checking applications:", error);
       }
@@ -60,22 +109,19 @@ const JobPage = ({ deleteJob }) => {
     }
   }, [job.id, user.id, isDeveloper]);
 
-  // ✅ Open Video Modal
   const openVideoModal = (videoUrl, applicantName) => {
     setCurrentVideoUrl(videoUrl);
     setCurrentApplicantName(applicantName);
     setShowVideoModal(true);
-    document.body.style.overflow = "hidden"; // Prevent background scroll
+    document.body.style.overflow = "hidden";
   };
 
-  // ✅ Close Video Modal
   const closeVideoModal = () => {
     setShowVideoModal(false);
     setCurrentVideoUrl("");
     document.body.style.overflow = "auto";
   };
 
-  // ✅ Open Resume Modal
   const openResumeModal = (resumeUrl, applicantName) => {
     setCurrentResumeUrl(resumeUrl);
     setCurrentApplicantName(applicantName);
@@ -83,14 +129,12 @@ const JobPage = ({ deleteJob }) => {
     document.body.style.overflow = "hidden";
   };
 
-  // ✅ Close Resume Modal
   const closeResumeModal = () => {
     setShowResumeModal(false);
     setCurrentResumeUrl("");
     document.body.style.overflow = "auto";
   };
 
-  // ✅ Apply to job
   const handleApply = async (e) => {
     e.preventDefault();
     setIsApplying(true);
@@ -118,16 +162,53 @@ const JobPage = ({ deleteJob }) => {
       });
 
       if (response.ok) {
-        alert("Application submitted successfully!");
+        const newApplication = await response.json();
+        toast.success("Application submitted successfully!");
         setAlreadyApplied(true);
+        setCurrentApplicationId(newApplication.id);
       } else {
-        alert("Error submitting application. Please try again.");
+        toast.error("Error submitting application. Please try again.");
       }
     } catch (error) {
       console.error("Error applying to job:", error);
-      alert("Error submitting application. Please try again.");
+      toast.error("Error submitting application. Please try again.");
     } finally {
       setIsApplying(false);
+    }
+  };
+
+  // ✅ NEW: Withdraw Application
+  const handleWithdrawApplication = async () => {
+    if (
+      !window.confirm(
+        "Are you sure you want to withdraw your application? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    setIsWithdrawing(true);
+
+    try {
+      const response = await fetch(
+        `/api/applications/${currentApplicationId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (response.ok) {
+        toast.success("Application withdrawn successfully!");
+        setAlreadyApplied(false);
+        setCurrentApplicationId(null);
+      } else {
+        toast.error("Failed to withdraw application. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error withdrawing application:", error);
+      toast.error("Error withdrawing application. Please try again.");
+    } finally {
+      setIsWithdrawing(false);
     }
   };
 
@@ -137,7 +218,6 @@ const JobPage = ({ deleteJob }) => {
     }
   };
 
-  // ✅ Approve / Reject
   const handleApprove = async (applicationId) => {
     try {
       const response = await fetch(`/api/applications/${applicationId}`, {
@@ -182,7 +262,6 @@ const JobPage = ({ deleteJob }) => {
     }
   };
 
-  // ✅ Toggle About Me expansion
   const toggleAboutMe = (appId) => {
     setExpandedAboutMe((prev) => ({
       ...prev,
@@ -190,7 +269,6 @@ const JobPage = ({ deleteJob }) => {
     }));
   };
 
-  // ✅ Load applications
   const handleViewApplications = async () => {
     try {
       setLoadingApplications(true);
@@ -251,8 +329,6 @@ const JobPage = ({ deleteJob }) => {
         };
       });
 
-      console.log("Applications with skills:", applicationsWithSkills);
-
       setApplications(applicationsWithSkills);
       setShowApplications(true);
     } catch (error) {
@@ -263,7 +339,6 @@ const JobPage = ({ deleteJob }) => {
     }
   };
 
-  // ✅ Delete job
   const onDeleteClick = (jobId) => {
     if (!window.confirm("Are you sure you want to delete this listing?"))
       return;
@@ -289,7 +364,7 @@ const JobPage = ({ deleteJob }) => {
         <div className="container m-auto py-10 px-6">
           <div className="grid grid-cols-1 md:grid-cols-70/30 w-full gap-6">
             <main>
-              {/* ✅ Job details */}
+              {/* Job details */}
               <div className="bg-white p-6 rounded-lg shadow-md text-center md:text-left">
                 <div className="text-gray-500 mb-4">{job.type}</div>
                 <h1 className="text-3xl font-bold mb-4">{job.title}</h1>
@@ -304,28 +379,65 @@ const JobPage = ({ deleteJob }) => {
                   Job Description
                 </h3>
                 <p className="mb-4">{job.description}</p>
+
                 <h3 className="text-indigo-800 text-lg font-bold mb-2">
                   Salary
                 </h3>
                 <p className="mb-4">{job.salary} / Year</p>
+
+                {/* ✅ NEW: Required Skills Section */}
+                {jobSkills.length > 0 && (
+                  <div className="border-t pt-6 mt-6">
+                    <h3 className="text-indigo-800 text-lg font-bold mb-4 flex items-center gap-2">
+                      <Code className="h-5 w-5" />
+                      Required Skills
+                    </h3>
+                    {skillsLoading ? (
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+                        <span className="text-sm">Loading skills...</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {jobSkills.map((skillName, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 border border-indigo-200"
+                          >
+                            {skillName}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* ✅ Apply / View Applications */}
+              {/* Apply / View Applications */}
               {isDeveloper() && (
                 <>
                   <div className="mt-6 flex flex-wrap gap-3">
-                    <button
-                      onClick={handleApply}
-                      disabled={isApplying || alreadyApplied}
-                      className="flex-1 min-w-[150px] px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white font-semibold rounded-xl shadow-md hover:shadow-lg text-base flex items-center justify-center gap-2 transition-all duration-300 disabled:cursor-not-allowed"
-                    >
-                      <FaBriefcase className="text-lg" />
-                      {alreadyApplied
-                        ? "Already Applied"
-                        : isApplying
-                        ? "Applying..."
-                        : "Apply Now"}
-                    </button>
+                    {!alreadyApplied ? (
+                      <button
+                        onClick={handleApply}
+                        disabled={isApplying}
+                        className="flex-1 min-w-[150px] px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white font-semibold rounded-xl shadow-md hover:shadow-lg text-base flex items-center justify-center gap-2 transition-all duration-300 disabled:cursor-not-allowed"
+                      >
+                        <FaBriefcase className="text-lg" />
+                        {isApplying ? "Applying..." : "Apply Now"}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleWithdrawApplication}
+                        disabled={isWithdrawing}
+                        className="flex-1 min-w-[150px] px-6 py-3 bg-red-500 hover:bg-red-600 disabled:bg-gray-400 text-white font-semibold rounded-xl shadow-md hover:shadow-lg text-base flex items-center justify-center gap-2 transition-all duration-300 disabled:cursor-not-allowed"
+                      >
+                        <X className="text-lg" />
+                        {isWithdrawing
+                          ? "Withdrawing..."
+                          : "Withdraw Application"}
+                      </button>
+                    )}
 
                     <button
                       onClick={handleViewCompany}
@@ -334,6 +446,22 @@ const JobPage = ({ deleteJob }) => {
                       View Company
                     </button>
                   </div>
+
+                  {/* ✅ Application Status Indicator */}
+                  {alreadyApplied && (
+                    <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                        <p className="text-sm text-amber-800 font-medium">
+                          ✓ You have already applied to this position
+                        </p>
+                      </div>
+                      <p className="text-xs text-amber-600 mt-1 ml-4">
+                        Click "Withdraw Application" if you want to cancel your
+                        application
+                      </p>
+                    </div>
+                  )}
                 </>
               )}
 
@@ -348,7 +476,7 @@ const JobPage = ({ deleteJob }) => {
                 </button>
               )}
 
-              {/* ✅ Applications list */}
+              {/* Applications list */}
               {showApplications && (
                 <div className="bg-white p-8 rounded-2xl shadow-lg mt-8 border border-gray-100">
                   <h3 className="text-indigo-700 text-xl font-semibold mb-6 flex items-center">
@@ -362,7 +490,7 @@ const JobPage = ({ deleteJob }) => {
                           className="border border-gray-200 p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow bg-gray-50"
                         >
                           <div className="flex flex-col gap-4">
-                            {/* ✅ Top section */}
+                            {/* Top section */}
                             <div className="flex justify-between items-start">
                               <div className="flex gap-4 items-start">
                                 <img
@@ -398,7 +526,7 @@ const JobPage = ({ deleteJob }) => {
                                 </div>
                               </div>
 
-                              {/* ✅ Media buttons - NOW OPENS MODAL */}
+                              {/* Media buttons */}
                               <div className="flex gap-2">
                                 {app.video && (
                                   <button
@@ -438,7 +566,7 @@ const JobPage = ({ deleteJob }) => {
                               </div>
                             </div>
 
-                            {/* ✅ Skills Section */}
+                            {/* Skills Section */}
                             {app.applicantSkills?.length > 0 && (
                               <div className="border-t border-gray-200 pt-4">
                                 <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
@@ -458,7 +586,7 @@ const JobPage = ({ deleteJob }) => {
                               </div>
                             )}
 
-                            {/* ✅ About Me Section */}
+                            {/* About Me Section */}
                             {app.aboutMe && (
                               <div className="border-t border-gray-200 pt-4">
                                 <div className="flex items-center justify-between mb-3">
@@ -527,7 +655,7 @@ const JobPage = ({ deleteJob }) => {
                               </div>
                             )}
 
-                            {/* ✅ Action Buttons */}
+                            {/* Action Buttons */}
                             {app.status === "pending" && (
                               <div className="flex gap-3 pt-4 border-t border-gray-200">
                                 <button
@@ -559,7 +687,7 @@ const JobPage = ({ deleteJob }) => {
               )}
             </main>
 
-            {/* ✅ Sidebar */}
+            {/* Sidebar */}
             <aside>
               <div className="bg-white p-6 rounded-lg shadow-md">
                 <h3 className="text-xl font-bold mb-6">Company Info</h3>
@@ -598,7 +726,7 @@ const JobPage = ({ deleteJob }) => {
         </div>
       </section>
 
-      {/* ✅ VIDEO MODAL */}
+      {/* VIDEO MODAL */}
       {showVideoModal && (
         <div
           className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4 animate-fadeIn"
@@ -608,7 +736,6 @@ const JobPage = ({ deleteJob }) => {
             className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden animate-slideUp"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
@@ -632,7 +759,6 @@ const JobPage = ({ deleteJob }) => {
               </button>
             </div>
 
-            {/* Modal Body */}
             <div className="p-6 bg-gray-900">
               <video
                 src={currentVideoUrl}
@@ -645,7 +771,6 @@ const JobPage = ({ deleteJob }) => {
               </video>
             </div>
 
-            {/* Modal Footer */}
             <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
               <p className="text-sm text-gray-600">
                 💡 Tip: Press{" "}
@@ -665,7 +790,7 @@ const JobPage = ({ deleteJob }) => {
         </div>
       )}
 
-      {/* ✅ RESUME MODAL */}
+      {/* RESUME MODAL */}
       {showResumeModal && (
         <div
           className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4 animate-fadeIn"
@@ -675,7 +800,6 @@ const JobPage = ({ deleteJob }) => {
             className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden animate-slideUp"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
@@ -710,7 +834,6 @@ const JobPage = ({ deleteJob }) => {
               </div>
             </div>
 
-            {/* Modal Body */}
             <div className="p-6 bg-gray-100 h-[calc(90vh-180px)] overflow-auto">
               <iframe
                 src={currentResumeUrl}
@@ -719,7 +842,6 @@ const JobPage = ({ deleteJob }) => {
               />
             </div>
 
-            {/* Modal Footer */}
             <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
               <p className="text-sm text-gray-600">
                 💡 Tip: Press{" "}
