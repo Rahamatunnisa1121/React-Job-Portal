@@ -333,9 +333,10 @@
       "salary": "Under $50K",
       "employerId": "2",
       "skills": [
+        "2",
         "6",
         "1758206221329",
-        "2"
+        "7"
       ],
       "company": {
         "name": "TCS",
@@ -343,7 +344,8 @@
         "contactEmail": "tcs@gmail.com",
         "contactPhone": "1234567890"
       },
-      "createdAt": "2025-10-15T14:27:15.306Z"
+      "createdAt": "2025-10-15T14:27:15.306Z",
+      "updatedAt": "2025-10-17T04:30:53.268Z"
     }
   ],
   "applications": [

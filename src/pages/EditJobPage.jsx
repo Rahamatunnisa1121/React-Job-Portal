@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLoaderData } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../contexts/AuthContext";
-import { AlertCircle, X, Search } from "lucide-react";
+import { AlertCircle, X, Search, Code, Loader2 } from "lucide-react";
 
 const EditJobPage = ({ updateJobSubmit }) => {
-  const job = useLoaderData(); // Get job data from loader
+  const job = useLoaderData();
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isEmployer, canEditJob } = useAuth();
@@ -27,10 +27,9 @@ const EditJobPage = ({ updateJobSubmit }) => {
   const [allSkills, setAllSkills] = useState([]);
   const [selectedSkills, setSelectedSkills] = useState([]);
   const [skillSearchTerm, setSkillSearchTerm] = useState("");
-  const [showSkillDropdown, setShowSkillDropdown] = useState(false);
   const [isLoadingSkills, setIsLoadingSkills] = useState(true);
 
-  // Fetch all available skills on component mount
+  // Fetch all available skills
   useEffect(() => {
     const fetchSkills = async () => {
       try {
@@ -73,7 +72,6 @@ const EditJobPage = ({ updateJobSubmit }) => {
 
       setLoading(false);
     } else if (job && !isLoadingSkills) {
-      // If skills are loaded but empty array
       setTitle(job.title || "");
       setType(job.type || "Full-Time");
       setLocation(job.location || "");
@@ -87,18 +85,18 @@ const EditJobPage = ({ updateJobSubmit }) => {
     }
   }, [job, allSkills, isLoadingSkills]);
 
-  // Filter skills based on search term and exclude already selected
-  const filteredSkills = allSkills.filter(
-    (skill) =>
-      skill.name.toLowerCase().includes(skillSearchTerm.toLowerCase()) &&
-      !selectedSkills.some((selected) => selected.id === skill.id)
+  // Filter skills based on search term only (don't exclude selected ones)
+  const filteredSkills = allSkills.filter((skill) =>
+    skill.name.toLowerCase().includes(skillSearchTerm.toLowerCase())
   );
 
   // Add skill to selected list
-  const handleAddSkill = (skill) => {
-    setSelectedSkills([...selectedSkills, skill]);
-    setSkillSearchTerm("");
-    setShowSkillDropdown(false);
+  const handleSkillToggle = (skill) => {
+    if (selectedSkills.some((s) => s.id === skill.id)) {
+      setSelectedSkills(selectedSkills.filter((s) => s.id !== skill.id));
+    } else {
+      setSelectedSkills([...selectedSkills, skill]);
+    }
   };
 
   // Remove skill from selected list
@@ -106,7 +104,7 @@ const EditJobPage = ({ updateJobSubmit }) => {
     setSelectedSkills(selectedSkills.filter((skill) => skill.id !== skillId));
   };
 
-  // Security check: Only job owner can edit
+  // Security check
   if (!loading && (!isEmployer() || !canEditJob(job))) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -134,6 +132,7 @@ const EditJobPage = ({ updateJobSubmit }) => {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mx-auto mb-2" />
           <div className="text-xl">Loading job details...</div>
         </div>
       </div>
@@ -147,88 +146,57 @@ const EditJobPage = ({ updateJobSubmit }) => {
   };
 
   const getDetailedEmailError = (email) => {
-    if (!email || email.trim() === "") {
-      return "";
-    }
-
+    if (!email || email.trim() === "") return "";
     const trimmedEmail = email.trim();
 
-    if (!trimmedEmail.includes("@")) {
-      return "Email must contain an @ symbol";
-    }
-
+    if (!trimmedEmail.includes("@")) return "Email must contain an @ symbol";
     const parts = trimmedEmail.split("@");
-
-    if (parts.length !== 2) {
-      return "Email must contain exactly one @ symbol";
-    }
+    if (parts.length !== 2) return "Email must contain exactly one @ symbol";
 
     const [localPart, domainPart] = parts;
-
-    if (!localPart || localPart.length === 0) {
+    if (!localPart || localPart.length === 0)
       return "Email must have text before the @ symbol";
-    }
-
-    if (!domainPart || domainPart.length === 0) {
+    if (!domainPart || domainPart.length === 0)
       return "Email must have a domain after the @ symbol";
-    }
-
-    if (!domainPart.includes(".")) {
+    if (!domainPart.includes("."))
       return "Domain must contain a dot (e.g., .com, .org)";
-    }
 
     const domainParts = domainPart.split(".");
-
-    if (domainParts.length < 2) {
+    if (domainParts.length < 2)
       return "Domain must have at least one dot (e.g., .com, .org)";
-    }
-
-    if (domainParts.some((part) => part.length === 0)) {
+    if (domainParts.some((part) => part.length === 0))
       return "Domain cannot have empty parts (check your dots)";
-    }
-
-    if (domainPart.startsWith(".") || domainPart.endsWith(".")) {
+    if (domainPart.startsWith(".") || domainPart.endsWith("."))
       return "Domain cannot start or end with a dot";
-    }
-
-    if (domainPart.startsWith("-") || domainPart.endsWith("-")) {
+    if (domainPart.startsWith("-") || domainPart.endsWith("-"))
       return "Domain cannot start or end with a hyphen";
-    }
 
     const validLocalRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+$/;
-    if (!validLocalRegex.test(localPart)) {
+    if (!validLocalRegex.test(localPart))
       return "Email contains invalid characters before @";
-    }
 
     const validDomainRegex = /^[a-zA-Z0-9.-]+$/;
-    if (!validDomainRegex.test(domainPart)) {
+    if (!validDomainRegex.test(domainPart))
       return "Domain contains invalid characters";
-    }
 
     const tld = domainParts[domainParts.length - 1];
-    if (tld.length < 2) {
+    if (tld.length < 2)
       return "Domain extension must be at least 2 characters (e.g., .com, .org)";
-    }
 
-    if (trimmedEmail.includes("..")) {
+    if (trimmedEmail.includes(".."))
       return "Email cannot contain consecutive dots";
-    }
-
-    if (!validateEmail(trimmedEmail)) {
+    if (!validateEmail(trimmedEmail))
       return "Please enter a valid email address";
-    }
 
     return "";
   };
 
   const handleEmailBlur = () => {
     const email = contactEmail.trim();
-
     if (email === "") {
       setEmailError("");
       return;
     }
-
     const detailedError = getDetailedEmailError(email);
     setEmailError(detailedError);
   };
@@ -239,7 +207,6 @@ const EditJobPage = ({ updateJobSubmit }) => {
 
     if (emailError || email.trim().length > 0) {
       const trimmedEmail = email.trim();
-
       if (trimmedEmail.length > 0) {
         const detailedError = getDetailedEmailError(trimmedEmail);
         setEmailError(detailedError);
@@ -274,7 +241,7 @@ const EditJobPage = ({ updateJobSubmit }) => {
       description,
       salary,
       employerId: job.employerId,
-      skills: selectedSkills.map((skill) => skill.id), // Add selected skill IDs
+      skills: selectedSkills.map((skill) => skill.id),
       company: {
         name: companyName,
         description: companyDescription,
@@ -379,77 +346,113 @@ const EditJobPage = ({ updateJobSubmit }) => {
               ></textarea>
             </div>
 
-            {/* Required Skills Section */}
-            <div className="mb-4">
-              <label className="block text-gray-700 font-bold mb-2">
-                Required Skills
-              </label>
-              <div className="relative">
-                <div className="flex items-center border rounded px-3 py-2 bg-white">
-                  <Search className="h-4 w-4 text-gray-400 mr-2" />
+            {/* ✅ ENHANCED SKILLS SECTION - Matching Profile.jsx style */}
+            <div className="mb-6">
+              <div className="border-t pt-4 mb-4">
+                <h3 className="text-lg font-medium text-gray-900 mb-2 flex items-center gap-2">
+                  <Code className="h-5 w-5" />
+                  Required Skills
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Select the skills required for this position
+                </p>
+              </div>
+
+              {/* Selected Skills Display - Shows first */}
+              {selectedSkills.length > 0 && (
+                <div className="mb-4">
+                  <div className="text-sm font-medium text-gray-700 mb-2">
+                    Selected skills ({selectedSkills.length}):
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedSkills.map((skill) => (
+                      <div
+                        key={skill.id}
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium"
+                      >
+                        {skill.name}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSkill(skill.id)}
+                          className="ml-1 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-200 rounded-full p-0.5 transition-colors"
+                          title="Remove skill"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Available Skills with Checkboxes */}
+              <div className="border border-gray-300 rounded-lg p-4 max-h-64 overflow-y-auto bg-white">
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="text-sm font-medium text-gray-700">
+                    Available Skills
+                  </h4>
+                  <span className="text-xs text-gray-500">
+                    {allSkills.length} skills available
+                  </span>
+                </div>
+
+                {/* Search Input */}
+                <div className="mb-3 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-4 w-4 text-gray-400" />
+                  </div>
                   <input
                     type="text"
-                    className="w-full outline-none"
-                    placeholder="Search and add skills (e.g., React, JavaScript)"
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    placeholder="Search skills..."
                     value={skillSearchTerm}
-                    onChange={(e) => {
-                      setSkillSearchTerm(e.target.value);
-                      setShowSkillDropdown(true);
-                    }}
-                    onFocus={() => setShowSkillDropdown(true)}
+                    onChange={(e) => setSkillSearchTerm(e.target.value)}
                   />
                 </div>
 
-                {/* Skills Dropdown */}
-                {showSkillDropdown && skillSearchTerm && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                    {isLoadingSkills ? (
-                      <div className="p-4 text-center text-gray-500">
-                        Loading skills...
+                {/* Skills List */}
+                {isLoadingSkills ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                    <span className="ml-2 text-sm text-gray-600">
+                      Loading skills...
+                    </span>
+                  </div>
+                ) : filteredSkills.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-2">
+                    {filteredSkills.map((skill) => (
+                      <div
+                        key={skill.id}
+                        className="flex items-center justify-between p-2 hover:bg-gray-50 rounded group"
+                      >
+                        <label className="flex items-center space-x-2 cursor-pointer flex-1">
+                          <input
+                            type="checkbox"
+                            checked={selectedSkills.some(
+                              (s) => s.id === skill.id
+                            )}
+                            onChange={() => handleSkillToggle(skill)}
+                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                          />
+                          <span className="text-sm text-gray-700">
+                            {skill.name}
+                          </span>
+                        </label>
                       </div>
-                    ) : filteredSkills.length > 0 ? (
-                      filteredSkills.map((skill) => (
-                        <button
-                          key={skill.id}
-                          type="button"
-                          className="w-full text-left px-4 py-2 hover:bg-indigo-50 transition-colors"
-                          onClick={() => handleAddSkill(skill)}
-                        >
-                          {skill.name}
-                        </button>
-                      ))
-                    ) : (
-                      <div className="p-4 text-center text-gray-500">
-                        No skills found
-                      </div>
-                    )}
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-sm text-gray-500">
+                    {skillSearchTerm
+                      ? "No skills found matching your search"
+                      : "No more skills available"}
                   </div>
                 )}
               </div>
 
-              {/* Selected Skills Display */}
-              {selectedSkills.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {selectedSkills.map((skill) => (
-                    <span
-                      key={skill.id}
-                      className="inline-flex items-center gap-1 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-medium"
-                    >
-                      {skill.name}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveSkill(skill.id)}
-                        className="hover:bg-indigo-200 rounded-full p-0.5 transition-colors"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
               <p className="text-sm text-gray-500 mt-2">
-                Add skills to help match with qualified candidates (
-                {selectedSkills.length} selected)
+                💡 Tip: Select all skills that are essential for this role to
+                help match with qualified candidates
               </p>
             </div>
 
@@ -619,11 +622,18 @@ const EditJobPage = ({ updateJobSubmit }) => {
                 Cancel
               </button>
               <button
-                className="bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-300 text-white font-bold py-2 px-4 rounded-full w-full focus:outline-none focus:shadow-outline disabled:cursor-not-allowed"
+                className="bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-300 text-white font-bold py-2 px-4 rounded-full w-full focus:outline-none focus:shadow-outline disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 type="submit"
                 disabled={isSubmitting || emailError}
               >
-                {isSubmitting ? "Updating Job..." : "Update Job"}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Updating Job...
+                  </>
+                ) : (
+                  "Update Job"
+                )}
               </button>
             </div>
           </form>
