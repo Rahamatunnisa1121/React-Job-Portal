@@ -380,16 +380,6 @@
       "status": "rejected"
     },
     {
-      "id": "1714",
-      "jobId": "3",
-      "employerId": "2",
-      "applicantId": "1",
-      "applicantName": "John Developer",
-      "applicantEmail": "john@dev.com",
-      "appliedAt": "2025-08-22T16:53:26.499Z",
-      "status": "approved"
-    },
-    {
       "id": "6564",
       "jobId": "3",
       "employerId": "2",
