@@ -599,7 +599,7 @@ const handleDiscardDraft = async () => {
     try {
       const fileExtension = file.name.split(".").pop();
       const timestamp = Date.now();
-      const fileName = `${YOUR_NAME}/${folder}/${user.id}_${folder}_${timestamp}.${fileExtension}`;
+      const fileName = `${YOUR_NAME}/${folder}/${user.id}_${folder}_${timestamp}.${fileExtension}&embedded=true`;
 
       const arrayBuffer = await file.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
