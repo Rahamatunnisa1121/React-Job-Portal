@@ -5,6 +5,7 @@ const AuthContext = createContext();
 export const USER_ROLES = {
   DEVELOPER: "developer",
   EMPLOYER: "employer",
+  COMPANY: "company",
 };
 
 export const AuthProvider = ({ children }) => {
@@ -22,18 +23,17 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      // Fetch users from your JSON server
-      const response = await fetch("http://localhost:8000/users");
-      const users = await response.json();
+      // First, try to login as a regular user (developer/employer)
+      const usersResponse = await fetch("http://localhost:8000/users");
+      const users = await usersResponse.json();
 
-      // Find user with matching credentials
       const foundUser = users.find(
         (u) => u.email === email && u.password === password
       );
 
       if (foundUser) {
         const userWithoutPassword = { ...foundUser };
-        delete userWithoutPassword.password; // Don't store password in state
+        delete userWithoutPassword.password;
 
         setUser(userWithoutPassword);
         localStorage.setItem(
@@ -41,9 +41,34 @@ export const AuthProvider = ({ children }) => {
           JSON.stringify(userWithoutPassword)
         );
         return { success: true };
-      } else {
-        return { success: false, error: "Invalid email or password" };
       }
+
+      // If not found in users, try companies API
+      const companiesResponse = await fetch("http://localhost:8000/companies");
+      const companies = await companiesResponse.json();
+
+      const foundCompany = companies.find(
+        (c) => c.email === email && c.password === password
+      );
+
+      if (foundCompany) {
+        // Add role property to company object
+        const companyWithoutPassword = {
+          ...foundCompany,
+          role: "company", // Add role to identify as company
+        };
+        delete companyWithoutPassword.password;
+
+        setUser(companyWithoutPassword);
+        localStorage.setItem(
+          "currentUser",
+          JSON.stringify(companyWithoutPassword)
+        );
+        return { success: true };
+      }
+
+      // Neither user nor company found
+      return { success: false, error: "Invalid email or password" };
     } catch (error) {
       console.error("Login error:", error);
       return { success: false, error: "Login failed. Please try again." };
@@ -55,17 +80,13 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("currentUser");
   };
 
-  // ✅ ADD THIS FUNCTION - Update user data after profile changes
+  // Update user data after profile changes
   const updateUser = (updatedUserData) => {
     try {
-      // Remove password if it exists (for security)
       const userWithoutPassword = { ...updatedUserData };
       delete userWithoutPassword.password;
 
-      // Update user state
       setUser(userWithoutPassword);
-
-      // Update localStorage to persist the changes
       localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword));
 
       console.log("User updated successfully:", userWithoutPassword);
@@ -76,6 +97,7 @@ export const AuthProvider = ({ children }) => {
 
   const isDeveloper = () => user?.role === USER_ROLES.DEVELOPER;
   const isEmployer = () => user?.role === USER_ROLES.EMPLOYER;
+  const isCompany = () => user?.role === USER_ROLES.COMPANY;
   const canEditJob = (job) => isEmployer() && job.employerId === user?.id;
 
   return (
@@ -85,9 +107,10 @@ export const AuthProvider = ({ children }) => {
         isLoading,
         login,
         logout,
-        updateUser, 
+        updateUser,
         isDeveloper,
         isEmployer,
+        isCompany,
         canEditJob,
         isAuthenticated: !!user,
       }}
@@ -104,3 +127,4 @@ export const useAuth = () => {
   }
   return context;
 };
+// File: src/contexts/AuthContext.jsx

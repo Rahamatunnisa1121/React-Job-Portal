@@ -1,7 +1,5 @@
-// src/components/Signup.jsx
 import React, { useState, useEffect } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import { Navigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   Eye,
   EyeOff,
@@ -14,6 +12,8 @@ import {
   CheckCircle,
   Code,
   X,
+  Building2,
+  FileText,
 } from "lucide-react";
 
 const Signup = () => {
@@ -24,7 +24,11 @@ const Signup = () => {
     password: "",
     confirmPassword: "",
     role: "developer",
-    skills: [], // Array to store selected skill IDs
+    skills: [],
+    // Company fields
+    companyName: "",
+    companyDescription: "",
+    companyIndustry: "",
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -34,12 +38,6 @@ const Signup = () => {
   const [availableSkills, setAvailableSkills] = useState([]);
   const [skillsLoading, setSkillsLoading] = useState(false);
   const [skillsError, setSkillsError] = useState("");
-  const { isAuthenticated } = useAuth();
-
-  // Redirect if already logged in
-  if (isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
 
   // Fetch skills when component mounts
   useEffect(() => {
@@ -68,22 +66,20 @@ const Signup = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
-    // Clear email error when user starts typing in email field
     if (name === "email") {
       setEmailError("");
     }
 
-    // Clear general form error when user makes changes
     if (error) {
       setError("");
     }
 
-    // Reset skills when role changes to employer
-    if (name === "role" && value === "employer") {
+    // Reset skills when role changes to employer or company
+    if (name === "role" && (value === "employer" || value === "company")) {
       setFormData((prev) => ({
         ...prev,
         [name]: value,
-        skills: [], // Clear skills for employers
+        skills: [],
       }));
     } else {
       setFormData((prev) => ({
@@ -93,7 +89,6 @@ const Signup = () => {
     }
   };
 
-  // Handle skill selection
   const handleSkillToggle = (skillId) => {
     setFormData((prev) => ({
       ...prev,
@@ -103,7 +98,6 @@ const Signup = () => {
     }));
   };
 
-  // Remove skill from selection
   const removeSkill = (skillId) => {
     setFormData((prev) => ({
       ...prev,
@@ -111,14 +105,12 @@ const Signup = () => {
     }));
   };
 
-  // Get skill name by ID
   const getSkillName = (skillId) => {
     const skill = availableSkills.find((s) => s.id === skillId);
     return skill ? skill.name : "";
   };
 
   const validateEmail = (email) => {
-    // More comprehensive email regex
     const regex =
       /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
     return regex.test(email);
@@ -131,50 +123,40 @@ const Signup = () => {
 
     const trimmedEmail = email.trim();
 
-    // Check for @ symbol
     if (!trimmedEmail.includes("@")) {
       return "Email must contain an @ symbol";
     }
 
-    // Split by @ to check parts
     const parts = trimmedEmail.split("@");
 
-    // Too many @ symbols
     if (parts.length !== 2) {
       return "Email must contain exactly one @ symbol";
     }
 
     const [localPart, domainPart] = parts;
 
-    // Check local part (before @)
     if (!localPart || localPart.length === 0) {
       return "Email must have text before the @ symbol";
     }
 
-    // Check domain part (after @)
     if (!domainPart || domainPart.length === 0) {
       return "Email must have a domain after the @ symbol";
     }
 
-    // Check for dot in domain
     if (!domainPart.includes(".")) {
       return "Domain must contain a dot (e.g., .com, .org)";
     }
 
-    // Split domain by dots
     const domainParts = domainPart.split(".");
 
-    // Check if domain has proper structure
     if (domainParts.length < 2) {
       return "Domain must have at least one dot (e.g., .com, .org)";
     }
 
-    // Check if any domain part is empty
     if (domainParts.some((part) => part.length === 0)) {
       return "Domain cannot have empty parts (check your dots)";
     }
 
-    // Check if domain starts or ends with dot/hyphen
     if (domainPart.startsWith(".") || domainPart.endsWith(".")) {
       return "Domain cannot start or end with a dot";
     }
@@ -183,43 +165,37 @@ const Signup = () => {
       return "Domain cannot start or end with a hyphen";
     }
 
-    // Check for valid characters in local part
     const validLocalRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+$/;
     if (!validLocalRegex.test(localPart)) {
       return "Email contains invalid characters before @";
     }
 
-    // Check for valid characters in domain
     const validDomainRegex = /^[a-zA-Z0-9.-]+$/;
     if (!validDomainRegex.test(domainPart)) {
       return "Domain contains invalid characters";
     }
 
-    // Check if the last part (TLD) is at least 2 characters
     const tld = domainParts[domainParts.length - 1];
     if (tld.length < 2) {
       return "Domain extension must be at least 2 characters (e.g., .com, .org)";
     }
 
-    // Check for consecutive dots
     if (trimmedEmail.includes("..")) {
       return "Email cannot contain consecutive dots";
     }
 
-    // If all checks pass but still invalid, use generic message
     if (!validateEmail(trimmedEmail)) {
       return "Please enter a valid email address";
     }
 
-    return ""; // Valid email
+    return "";
   };
 
-  // Real-time email validation on blur (when user clicks away)
   const handleEmailBlur = () => {
     const email = formData.email.trim();
 
     if (email === "") {
-      setEmailError(""); // Don't show error for empty field on blur
+      setEmailError("");
       return;
     }
 
@@ -227,11 +203,9 @@ const Signup = () => {
     setEmailError(detailedError);
   };
 
-  // Real-time email validation on input (optional - for more immediate feedback)
   const handleEmailInput = (e) => {
     handleInputChange(e);
 
-    // Only validate if there's already an error showing or if field has content
     if (emailError || e.target.value.trim().length > 0) {
       const email = e.target.value.trim();
 
@@ -245,6 +219,35 @@ const Signup = () => {
   };
 
   const validateForm = () => {
+    // Company-specific validation
+    if (formData.role === "company") {
+      if (!formData.companyName.trim()) {
+        return "Company name is required";
+      }
+      if (!formData.companyDescription.trim()) {
+        return "Company description is required";
+      }
+      if (!formData.companyIndustry.trim()) {
+        return "Company industry is required";
+      }
+      if (!formData.email.trim()) {
+        return "Email is required";
+      }
+      if (!validateEmail(formData.email.trim())) {
+        const detailedError = getDetailedEmailError(formData.email.trim());
+        setEmailError(detailedError);
+        return detailedError;
+      }
+      if (formData.password.length < 6) {
+        return "Password must be at least 6 characters long";
+      }
+      if (formData.password !== formData.confirmPassword) {
+        return "Passwords do not match";
+      }
+      return null; // Valid company form
+    }
+
+    // User (Developer/Employer) validation
     if (!formData.name.trim()) {
       return "Full name is required";
     }
@@ -279,6 +282,46 @@ const Signup = () => {
     }
   };
 
+  const checkCompanyExists = async (email) => {
+    try {
+      const response = await fetch(`/api/companies?email=${email}`);
+      const companies = await response.json();
+      return companies.length > 0;
+    } catch (error) {
+      console.error("Error checking company existence:", error);
+      return false;
+    }
+  };
+
+  const createCompany = async (companyData) => {
+    try {
+      const response = await fetch("/api/companies", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: Date.now().toString(),
+          name: companyData.companyName,
+          description: companyData.companyDescription,
+          industry: companyData.companyIndustry,
+          email: companyData.email,
+          password: companyData.password,
+          employerIds: [],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create company");
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Error creating company:", error);
+      throw error;
+    }
+  };
+
   const createUser = async (userData) => {
     try {
       const response = await fetch("/api/users", {
@@ -288,7 +331,7 @@ const Signup = () => {
         },
         body: JSON.stringify({
           ...userData,
-          id: Date.now().toString(), // Simple ID generation
+          id: Date.now().toString(),
         }),
       });
 
@@ -308,7 +351,6 @@ const Signup = () => {
     setError("");
     setIsLoading(true);
 
-    // Validate form
     const validationError = validateForm();
     if (validationError) {
       setError(validationError);
@@ -317,28 +359,52 @@ const Signup = () => {
     }
 
     try {
-      // Check if user already exists
-      const userExists = await checkUserExists(formData.email.trim());
-      if (userExists) {
-        setError("An account with this email already exists");
-        setIsLoading(false);
-        return;
+      // Handle company registration
+      if (formData.role === "company") {
+        const companyExists = await checkCompanyExists(formData.email.trim());
+        if (companyExists) {
+          setError("A company with this email already exists");
+          setIsLoading(false);
+          return;
+        }
+
+        await createCompany({
+          companyName: formData.companyName,
+          companyDescription: formData.companyDescription,
+          companyIndustry: formData.companyIndustry,
+          email: formData.email.trim(),
+          password: formData.password,
+        });
+
+        setSuccess(true);
+        setError("");
+      } else {
+        // Handle user registration (developer/employer)
+        const userExists = await checkUserExists(formData.email.trim());
+        if (userExists) {
+          setError("An account with this email already exists");
+          setIsLoading(false);
+          return;
+        }
+
+        const {
+          confirmPassword,
+          companyName,
+          companyDescription,
+          companyIndustry,
+          ...userDataToSave
+        } = formData;
+        userDataToSave.email = userDataToSave.email.trim();
+
+        if (userDataToSave.role === "employer") {
+          delete userDataToSave.skills;
+        }
+
+        await createUser(userDataToSave);
+
+        setSuccess(true);
+        setError("");
       }
-
-      // Create new user
-      const { confirmPassword, ...userDataToSave } = formData;
-      // Trim email before saving
-      userDataToSave.email = userDataToSave.email.trim();
-
-      // If employer, remove skills array
-      if (userDataToSave.role === "employer") {
-        delete userDataToSave.skills;
-      }
-
-      await createUser(userDataToSave);
-
-      setSuccess(true);
-      setError("");
     } catch (error) {
       setError("Failed to create account. Please try again.");
     }
@@ -355,11 +421,14 @@ const Signup = () => {
               <CheckCircle className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-4">
-              Account Created Successfully!
+              {formData.role === "company"
+                ? "Company Registered Successfully!"
+                : "Account Created Successfully!"}
             </h1>
             <p className="text-gray-600 mb-6">
-              Your account has been created. You can now sign in with your
-              credentials.
+              {formData.role === "company"
+                ? "Your company has been registered. You can now sign in with your company credentials."
+                : "Your account has been created. You can now sign in with your credentials."}
             </p>
             <Link
               to="/login"
@@ -376,7 +445,6 @@ const Signup = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl mb-4 shadow-lg">
             <Briefcase className="w-8 h-8 text-white" />
@@ -387,77 +455,14 @@ const Signup = () => {
           <p className="text-gray-600">Sign up for your Jobs App account</p>
         </div>
 
-        {/* Signup Form */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Full Name Field */}
-            <div>
-              <label
-                htmlFor="name"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Full Name
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 placeholder-gray-400"
-                  placeholder="Enter your full name"
-                />
-              </div>
-            </div>
-
-            {/* Email Field */}
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Email Address
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleEmailInput}
-                  onBlur={handleEmailBlur}
-                  required
-                  className={`block w-full pl-10 pr-3 py-3 rounded-lg transition-colors duration-200 placeholder-gray-400 
-                    ${
-                      emailError
-                        ? "border-red-500 focus:border-red-500 focus:ring-red-500 bg-red-50"
-                        : "border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    }`}
-                  placeholder="Enter your email"
-                />
-                {emailError && (
-                  <div className="flex items-center gap-2 mt-2 text-red-600">
-                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                    <span className="text-sm">{emailError}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* User Type Selection */}
+            {/* Account Type Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Account Type
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <label className="relative">
                   <input
                     type="radio"
@@ -477,9 +482,7 @@ const Signup = () => {
                     <div className="text-sm font-medium text-gray-900">
                       Developer
                     </div>
-                    <div className="text-xs text-gray-500">
-                      Looking for jobs
-                    </div>
+                    <div className="text-xs text-gray-500">Find jobs</div>
                   </div>
                 </label>
                 <label className="relative">
@@ -501,9 +504,169 @@ const Signup = () => {
                     <div className="text-sm font-medium text-gray-900">
                       Employer
                     </div>
-                    <div className="text-xs text-gray-500">Hiring talent</div>
+                    <div className="text-xs text-gray-500">Hire talent</div>
                   </div>
                 </label>
+                <label className="relative">
+                  <input
+                    type="radio"
+                    name="role"
+                    value="company"
+                    checked={formData.role === "company"}
+                    onChange={handleInputChange}
+                    className="sr-only"
+                  />
+                  <div
+                    className={`p-3 rounded-lg border-2 cursor-pointer transition-colors duration-200 ${
+                      formData.role === "company"
+                        ? "border-purple-500 bg-purple-50"
+                        : "border-gray-300 bg-white hover:border-gray-400"
+                    }`}
+                  >
+                    <div className="text-sm font-medium text-gray-900">
+                      Company
+                    </div>
+                    <div className="text-xs text-gray-500">Register</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Company Fields */}
+            {formData.role === "company" && (
+              <>
+                <div>
+                  <label
+                    htmlFor="companyName"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      Company Name
+                    </div>
+                  </label>
+                  <input
+                    id="companyName"
+                    name="companyName"
+                    type="text"
+                    value={formData.companyName}
+                    onChange={handleInputChange}
+                    required
+                    className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 placeholder-gray-400"
+                    placeholder="Enter company name"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="companyDescription"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Company Description
+                    </div>
+                  </label>
+                  <textarea
+                    id="companyDescription"
+                    name="companyDescription"
+                    value={formData.companyDescription}
+                    onChange={handleInputChange}
+                    required
+                    rows={3}
+                    className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 placeholder-gray-400"
+                    placeholder="Brief description of your company"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="companyIndustry"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Industry
+                  </label>
+                  <input
+                    id="companyIndustry"
+                    name="companyIndustry"
+                    type="text"
+                    value={formData.companyIndustry}
+                    onChange={handleInputChange}
+                    required
+                    className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 placeholder-gray-400"
+                    placeholder="e.g., Technology, Finance, Healthcare"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* User Name Field (not for company) */}
+            {formData.role !== "company" && (
+              <div>
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Full Name
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <User className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="name"
+                    name="name"
+                    type="text"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 placeholder-gray-400"
+                    placeholder="Enter your full name"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Email Field */}
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                {formData.role === "company"
+                  ? "Company Email"
+                  : "Email Address"}
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleEmailInput}
+                  onBlur={handleEmailBlur}
+                  required
+                  className={`block w-full pl-10 pr-3 py-3 rounded-lg transition-colors duration-200 placeholder-gray-400 
+                    ${
+                      emailError
+                        ? "border-red-500 focus:border-red-500 focus:ring-red-500 bg-red-50"
+                        : "border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    }`}
+                  placeholder={
+                    formData.role === "company"
+                      ? "company@example.com"
+                      : "Enter your email"
+                  }
+                />
+                {emailError && (
+                  <div className="flex items-center gap-2 mt-2 text-red-600">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    <span className="text-sm">{emailError}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -531,7 +694,6 @@ const Signup = () => {
                   </div>
                 )}
 
-                {/* Selected Skills Display */}
                 {formData.skills.length > 0 && (
                   <div className="mb-3">
                     <div className="text-xs text-gray-600 mb-2">
@@ -557,7 +719,6 @@ const Signup = () => {
                   </div>
                 )}
 
-                {/* Skills Selection */}
                 <div className="border border-gray-300 rounded-lg p-3 max-h-40 overflow-y-auto">
                   {skillsLoading ? (
                     <div className="flex items-center justify-center py-4">
@@ -687,8 +848,12 @@ const Signup = () => {
               {isLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Creating Account...
+                  {formData.role === "company"
+                    ? "Registering Company..."
+                    : "Creating Account..."}
                 </>
+              ) : formData.role === "company" ? (
+                "Register Company"
               ) : (
                 "Create Account"
               )}

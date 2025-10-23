@@ -43,9 +43,13 @@ const Login = () => {
     if (type === "developer") {
       setEmail("john@dev.com");
       setPassword("123456");
-    } else {
+    } else if(type === "employer"){
       setEmail("jane@company.com");
       setPassword("123456");
+    }
+    else {
+      setEmail("l4g123@gmail.com");
+      setPassword("l4gl4g");
     }
   };
 
@@ -177,6 +181,13 @@ const Login = () => {
                 className="w-full px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors duration-200"
               >
                 Employer Account (jane@company.com)
+              </button>
+              <button
+                type="button"
+                onClick={() => fillDemoCredentials("company")}
+                className="w-full px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors duration-200"
+              >
+                Company Account (l4g123@gmail.com)
               </button>
             </div>
 
