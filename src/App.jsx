@@ -3,9 +3,10 @@ import {
   createBrowserRouter,
   createRoutesFromElements,
   RouterProvider,
+  Navigate,
 } from "react-router-dom";
 import "react-quill/dist/quill.snow.css";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import MainLayout from "./layouts/MainLayout";
 import HomePage from "./pages/HomePage";
 import JobsPage from "./pages/JobsPage";
@@ -19,8 +20,27 @@ import MyApplications from "./pages/MyApplications";
 import Recommendations from "./pages/Recommendations";
 import Profile from "./components/Profile";
 import EmployerProfile from "./components/EmployerProfile";
+
+// Company Pages
+import CompanyDashboard from "./pages/company/CompanyDashboard";
+import CompanyEmployers from "./pages/company/CompanyEmployers";
+import CompanyStats from "./pages/company/CompanyStats";
+import AddEmployer from "./pages/company/AddEmployer";
+import CompanyProfile from "./pages/company/CompanyProfile";
+
+// Home Route Wrapper - Redirects companies to dashboard
+const HomeRouteWrapper = () => {
+  const { isCompany } = useAuth();
+
+  if (isCompany()) {
+    return <Navigate to="/company-dashboard" replace />;
+  }
+
+  return <HomePage />;
+};
+
 const App = () => {
-  // Add New Job                                                                                                                    
+  // Add New Job
   const addJob = async (newJob) => {
     const res = await fetch("/api/jobs", {
       method: "POST",
@@ -52,41 +72,53 @@ const App = () => {
     return;
   };
 
-const router = createBrowserRouter(
-  createRoutesFromElements(
-    <>
-      {/* Public routes (outside MainLayout) */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
+  const router = createBrowserRouter(
+    createRoutesFromElements(
+      <>
+        {/* Public routes (outside MainLayout) */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
 
-      {/* Protected/Main routes (with MainLayout wrapper) */}
-      <Route path="/" element={<MainLayout />}>
-        <Route index element={<HomePage />} />
-        <Route path="profile" element={<Profile />} />
-        <Route path="jobs" element={<JobsPage />} />
+        {/* Protected/Main routes (with MainLayout wrapper) */}
+        <Route path="/" element={<MainLayout />}>
+          {/* Home Route - Redirects companies to dashboard */}
+          <Route index element={<HomeRouteWrapper />} />
 
-        <Route path="add-job" element={<AddJobPage addJobSubmit={addJob} />} />
-        <Route
-          path="edit-job/:id"
-          element={<EditJobPage updateJobSubmit={updateJob} />}
-          loader={jobLoader}
-        />
-        <Route path="/employer/:id" element={<EmployerProfile />} />
-        <Route
-          path="jobs/:id"
-          element={<JobPage deleteJob={deleteJob} />}
-          loader={jobLoader}
-        />
+          <Route path="profile" element={<Profile />} />
+          <Route path="jobs" element={<JobsPage />} />
 
-        <Route path="myapplications" element={<MyApplications />} />
-        <Route path="recommendations" element={<Recommendations />} />
+          <Route
+            path="add-job"
+            element={<AddJobPage addJobSubmit={addJob} />}
+          />
+          <Route
+            path="edit-job/:id"
+            element={<EditJobPage updateJobSubmit={updateJob} />}
+            loader={jobLoader}
+          />
+          <Route path="/employer/:id" element={<EmployerProfile />} />
+          <Route
+            path="jobs/:id"
+            element={<JobPage deleteJob={deleteJob} />}
+            loader={jobLoader}
+          />
 
-        {/* Catch-all */}
-        <Route path="*" element={<NotFoundPage />} />
-      </Route>
-    </>
-  )
-);
+          <Route path="myapplications" element={<MyApplications />} />
+          <Route path="recommendations" element={<Recommendations />} />
+
+          {/* Company Routes */}
+          <Route path="company-dashboard" element={<CompanyDashboard />} />
+          <Route path="company-employers" element={<CompanyEmployers />} />
+          <Route path="company-stats" element={<CompanyStats />} />
+          <Route path="add-employer" element={<AddEmployer />} />
+          <Route path="company-profile" element={<CompanyProfile />} />
+
+          {/* Catch-all */}
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+      </>
+    )
+  );
 
   return (
     <AuthProvider>

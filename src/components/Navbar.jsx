@@ -1,11 +1,12 @@
-import { NavLink } from "react-router-dom";
-import logo from "../assets/images/logo.png";
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { NavLink, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { Building2, UserPlus, Settings, BarChart3 } from "lucide-react";
+import logo from "../assets/images/logo.png";
 
 const Navbar = () => {
-  const { user, logout, isDeveloper, isEmployer, isAuthenticated } = useAuth();
+  const { user, logout, isDeveloper, isEmployer, isCompany, isAuthenticated } =
+    useAuth();
   const navigate = useNavigate();
 
   const linkClass = ({ isActive }) =>
@@ -23,7 +24,10 @@ const Navbar = () => {
       <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
         <div className="flex h-20 items-center justify-between">
           <div className="flex flex-1 items-center justify-center md:items-stretch md:justify-start">
-            <NavLink className="flex flex-shrink-0 items-center mr-4" to="/">
+            <NavLink
+              className="flex flex-shrink-0 items-center mr-4"
+              to={isCompany() ? "/company-dashboard" : "/"}
+            >
               <img className="h-10 w-auto" src={logo} alt="React Jobs" />
               <span className="hidden md:block text-white text-2xl font-bold ml-2">
                 React Jobs
@@ -34,30 +38,50 @@ const Navbar = () => {
             {isAuthenticated && (
               <div className="md:ml-auto">
                 <div className="flex space-x-2">
-                  <NavLink to="/" className={linkClass}>
-                    {isDeveloper() ? "Jobs" : "My Jobs"}
-                  </NavLink>
-
-                  {/* Jobs link - visible to all authenticated users */}
-                  <NavLink to="/jobs" className={linkClass}>
-                    {isDeveloper() ? "Browse Jobs" : "All Jobs"}
-                  </NavLink>
-
-                  {/* Add Job - Only visible to employers */}
-                  {isEmployer() && (
-                    <NavLink to="/add-job" className={linkClass}>
-                      Add Job
-                    </NavLink>
+                  {/* Company Navigation */}
+                  {isCompany() && (
+                    <>
+                      <NavLink to="/company-dashboard" className={linkClass}>
+                        Dashboard
+                      </NavLink>
+                      <NavLink to="/company-employers" className={linkClass}>
+                        Employers
+                      </NavLink>
+                      <NavLink to="/company-stats" className={linkClass}>
+                        Reports
+                      </NavLink>
+                    </>
                   )}
-                  {isDeveloper() && (
-                    <NavLink to="/myapplications" className={linkClass}>
-                      My applications
-                    </NavLink>
-                  )}
-                  {isDeveloper() && (
-                    <NavLink to="/recommendations" className={linkClass}>
-                      Job Recommendations
-                    </NavLink>
+
+                  {/* Developer/Employer Navigation (unchanged) */}
+                  {!isCompany() && (
+                    <>
+                      <NavLink to="/" className={linkClass}>
+                        {isDeveloper() ? "Jobs" : "My Jobs"}
+                      </NavLink>
+
+                      <NavLink to="/jobs" className={linkClass}>
+                        {isDeveloper() ? "Browse Jobs" : "All Jobs"}
+                      </NavLink>
+
+                      {isEmployer() && (
+                        <NavLink to="/add-job" className={linkClass}>
+                          Add Job
+                        </NavLink>
+                      )}
+
+                      {isDeveloper() && (
+                        <NavLink to="/myapplications" className={linkClass}>
+                          My Applications
+                        </NavLink>
+                      )}
+
+                      {isDeveloper() && (
+                        <NavLink to="/recommendations" className={linkClass}>
+                          Job Recommendations
+                        </NavLink>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -68,11 +92,37 @@ const Navbar = () => {
           <div className="flex items-center space-x-4">
             {isAuthenticated ? (
               <>
-                {/* User welcome message */}
+                {/* Company Quick Actions - Only visible for companies */}
+                {isCompany() && (
+                  <div className="hidden lg:flex items-center space-x-2 mr-4">
+                    <NavLink
+                      to="/add-employer"
+                      className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-3 rounded transition-colors duration-200 text-sm"
+                      title="Add Employer"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      <span className="hidden xl:inline">Add Employer</span>
+                    </NavLink>
+
+                    <NavLink
+                      to="/company-profile"
+                      className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 px-3 rounded transition-colors duration-200 text-sm"
+                      title="Edit Company Profile"
+                    >
+                      <Building2 className="h-4 w-4" />
+                      <span className="hidden xl:inline">Edit Profile</span>
+                    </NavLink>
+
+                  </div>
+                )}
+
+                {/* User/Company welcome message */}
                 <div className="text-white text-sm">
                   <span className="hidden sm:inline">Welcome, </span>
-                  {/* <span className="font-semibold">{user.name}</span> */}
-                  <NavLink to="/profile" className={linkClass}>
+                  <NavLink
+                    to="/profile"
+                    className="hover:text-gray-200 transition-colors"
+                  >
                     <span className="font-semibold">{user.name}</span>
                   </NavLink>
                   <span className="ml-1 text-xs bg-indigo-500 px-2 py-1 rounded-full">
