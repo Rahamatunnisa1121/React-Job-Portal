@@ -112,15 +112,30 @@ const Navbar = () => {
                       <Building2 className="h-4 w-4" />
                       <span className="hidden xl:inline">Edit Profile</span>
                     </NavLink>
-
                   </div>
                 )}
 
                 {/* User/Company welcome message */}
-                <div className="text-white text-sm">
+                {/* <div className="text-white text-sm">
                   <span className="hidden sm:inline">Welcome, </span>
                   <NavLink
                     to="/profile"
+                    className="hover:text-gray-200 transition-colors"
+                  >
+                    <span className="font-semibold">{user.name}</span>
+                  </NavLink>
+                  <span className="ml-1 text-xs bg-indigo-500 px-2 py-1 rounded-full">
+                    {user.role}
+                  </span>
+                </div> */}
+                <div className="text-white text-sm">
+                  <span className="hidden sm:inline">Welcome, </span>
+                  <NavLink
+                    to={
+                      isCompany()
+                        ? "/company-profile"
+                        : "/profile"
+                    }
                     className="hover:text-gray-200 transition-colors"
                   >
                     <span className="font-semibold">{user.name}</span>

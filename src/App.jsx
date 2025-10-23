@@ -111,7 +111,7 @@ const App = () => {
           <Route path="company-dashboard" element={<CompanyDashboard />} />
           <Route path="company-employers" element={<CompanyEmployers />} />
           <Route path="company-stats" element={<CompanyStats />} />
-          <Route path="add-employer" element={<AddEmployer />} />
+          <Route path="/add-employer" element={<AddEmployer />} />
           <Route path="company-profile" element={<CompanyProfile />} />
           <Route path="/edit-employer/:employerId" element={<EditEmployer />} />
           {/* Catch-all */}

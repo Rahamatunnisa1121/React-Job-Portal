@@ -329,7 +329,7 @@ const AddEmployer = () => {
               </button>
               <button
                 type="button"
-                onClick={() => navigate("/manage-employers")}
+                onClick={() => navigate("/company-employers")}
                 disabled={isSubmitting}
                 className="flex-1 bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
               >
