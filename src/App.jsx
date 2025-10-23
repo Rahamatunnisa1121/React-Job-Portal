@@ -27,6 +27,7 @@ import CompanyEmployers from "./pages/company/CompanyEmployers";
 import CompanyStats from "./pages/company/CompanyStats";
 import AddEmployer from "./pages/company/AddEmployer";
 import CompanyProfile from "./pages/company/CompanyProfile";
+import EditEmployer from "./pages/company/EditEmployer";
 
 // Home Route Wrapper - Redirects companies to dashboard
 const HomeRouteWrapper = () => {
@@ -112,7 +113,7 @@ const App = () => {
           <Route path="company-stats" element={<CompanyStats />} />
           <Route path="add-employer" element={<AddEmployer />} />
           <Route path="company-profile" element={<CompanyProfile />} />
-
+          <Route path="/edit-employer/:employerId" element={<EditEmployer />} />
           {/* Catch-all */}
           <Route path="*" element={<NotFoundPage />} />
         </Route>
