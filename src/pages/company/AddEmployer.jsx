@@ -30,7 +30,7 @@ const AddEmployer = () => {
     designation: "",
     email: "",
     password: "",
-    salary: "",
+    salary:""
   });
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -290,7 +290,6 @@ const AddEmployer = () => {
                 disabled={isSubmitting}
               />
             </div>
-
             {/* Salary */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -318,7 +317,6 @@ const AddEmployer = () => {
                 Enter annual salary amount in rupees
               </p>
             </div>
-
             {/* Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">

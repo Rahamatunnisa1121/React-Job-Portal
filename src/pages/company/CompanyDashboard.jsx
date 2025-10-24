@@ -320,7 +320,7 @@ const CompanyDashboard = () => {
             </p>
             <p className="text-4xl font-bold mb-2">
               {stats.avgSalary > 0
-                ? `$${stats.avgSalary.toLocaleString()}`
+                ? `₹${stats.avgSalary.toLocaleString()}`
                 : "N/A"}
             </p>
             <div className="flex items-center gap-2 text-green-100 text-sm">
