@@ -30,6 +30,7 @@ const AddEmployer = () => {
     designation: "",
     email: "",
     password: "",
+    salary: "",
   });
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -108,6 +109,7 @@ const AddEmployer = () => {
         designation: formData.designation,
         email: formData.email,
         password: formData.password, // Note: Should be hashed on backend
+        salary: parseFloat(formData.salary),
         profilePhoto: profilePhotoUrl,
       };
 
@@ -287,6 +289,34 @@ const AddEmployer = () => {
                 required
                 disabled={isSubmitting}
               />
+            </div>
+
+            {/* Salary */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Salary (Annual) <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500">
+                  ₹
+                </span>
+                <input
+                  type="number"
+                  value={formData.salary}
+                  onChange={(e) =>
+                    setFormData({ ...formData, salary: e.target.value })
+                  }
+                  className="w-full border border-gray-300 rounded-lg pl-8 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., 500000"
+                  required
+                  disabled={isSubmitting}
+                  min="0"
+                  step="1000"
+                />
+              </div>
+              <p className="text-sm text-gray-500 mt-2">
+                Enter annual salary amount in rupees
+              </p>
             </div>
 
             {/* Password */}

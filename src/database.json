@@ -521,7 +521,8 @@
       "password": "l4gl4g",
       "employerIds": [
         "7faa",
-        "6981"
+        "6981",
+        "c90f"
       ],
       "companyPhoto": "https://4g-s3-upload.s3.ap-south-1.amazonaws.com/ruhi/company_photos/1761201126360_company_photos_1761286019769.jpeg&embedded=true"
     }
@@ -534,7 +535,8 @@
       "designation": "HR Manager",
       "email": "lisa@l4g.com",
       "password": "lisa1234",
-      "profilePhoto": "https://4g-s3-upload.s3.ap-south-1.amazonaws.com/ruhi/employer_photos/1761201126360_employer_photos_1761238026345.jpeg&embedded=true"
+      "profilePhoto": "https://4g-s3-upload.s3.ap-south-1.amazonaws.com/ruhi/employer_photos/1761201126360_employer_photos_1761238026345.jpeg&embedded=true",
+      "salary": 150000
     },
     {
       "id": "6981",
@@ -543,7 +545,18 @@
       "designation": "HR Manager",
       "email": "john@l4g.com",
       "password": "john1234",
-      "profilePhoto": "https://4g-s3-upload.s3.ap-south-1.amazonaws.com/ruhi/employer_photos/1761201126360_employer_photos_1761238978645.png&embedded=true"
+      "profilePhoto": "https://4g-s3-upload.s3.ap-south-1.amazonaws.com/ruhi/employer_photos/1761201126360_employer_photos_1761238978645.png&embedded=true",
+      "salary": 150000
+    },
+    {
+      "id": "c90f",
+      "companyId": "1761201126360",
+      "name": "Bob",
+      "designation": "Senior Developer",
+      "email": "bob@l4g.com",
+      "password": "bob1234",
+      "salary": 100000,
+      "profilePhoto": "https://4g-s3-upload.s3.ap-south-1.amazonaws.com/ruhi/employer_photos/1761201126360_employer_photos_1761287078290.jpg&embedded=true"
     }
   ]
 }
