@@ -308,6 +308,8 @@ const Signup = () => {
           email: companyData.email,
           password: companyData.password,
           employerIds: [],
+          isBeingEdited: false,
+          editingBy: null,
         }),
       });
 

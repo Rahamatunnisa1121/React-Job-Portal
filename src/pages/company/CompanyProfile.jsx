@@ -39,7 +39,7 @@ const YOUR_NAME = import.meta.env.VITE_YOUR_NAME;
 
 const CompanyProfile = () => {
   const navigate = useNavigate();
-  const { user, updateUser } = useAuth();
+  const { user, isCompany, isEmployer, updateUser } = useAuth();
 
   const [companyData, setCompanyData] = useState(null);
   const [employersCount, setEmployersCount] = useState(0);
@@ -102,7 +102,12 @@ const CompanyProfile = () => {
   const fetchCompanyData = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/companies/${user.id}`);
+      let response;
+      if (isCompany()) {
+        response = await fetch(`/api/companies/${user.id}`);
+      } else if (isEmployer()) {
+        response = await fetch(`/api/companies/${user.companyId}`);
+      }
 
       if (!response.ok) {
         throw new Error("Failed to fetch company data");

@@ -67,6 +67,46 @@ export const AuthProvider = ({ children }) => {
         return { success: true };
       }
 
+      //company employees
+      const EmployerResponse = await fetch("http://localhost:8000/employers");
+      const employers = await EmployerResponse.json();
+
+      const foundEmployer = employers.find(
+        (e) => e.email === email && e.password === password
+      );
+
+      if (foundEmployer) {
+        // Add role property to employer object
+        const employerWithoutPassword = {
+          ...foundEmployer,
+          role: "employer", // Add role to identify as employer
+        };
+        delete employerWithoutPassword.password;
+
+        setUser(employerWithoutPassword);
+        localStorage.setItem(
+          "currentUser",
+          JSON.stringify(employerWithoutPassword)
+        );
+        return { success: true };
+      }
+
+      if (foundEmployer) {
+        // Add role property to employer object
+        const employerWithoutPassword = {
+          ...foundEmployer,
+          role: "employer", // Add role to identify as employer
+        };
+        delete employerWithoutPassword.password;
+
+        setUser(employerWithoutPassword);
+        localStorage.setItem(
+          "currentUser",
+          JSON.stringify(employerWithoutPassword)
+        );
+        return { success: true };
+      }
+
       // Neither user nor company found
       return { success: false, error: "Invalid email or password" };
     } catch (error) {

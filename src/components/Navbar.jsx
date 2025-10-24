@@ -70,6 +70,12 @@ const Navbar = () => {
                         </NavLink>
                       )}
 
+                      {isEmployer() && (
+                        <NavLink to="/company-profile" className={linkClass}>
+                          Edit company profile
+                        </NavLink>
+                      )}
+
                       {isDeveloper() && (
                         <NavLink to="/myapplications" className={linkClass}>
                           My Applications
@@ -103,7 +109,6 @@ const Navbar = () => {
                       <UserPlus className="h-4 w-4" />
                       <span className="hidden xl:inline">Add Employer</span>
                     </NavLink>
-
                   </div>
                 )}
 
@@ -123,11 +128,7 @@ const Navbar = () => {
                 <div className="text-white text-sm">
                   <span className="hidden sm:inline">Welcome, </span>
                   <NavLink
-                    to={
-                      isCompany()
-                        ? "/company-profile"
-                        : "/profile"
-                    }
+                    to={isCompany() ? "/company-profile" : "/profile"}
                     className="hover:text-gray-200 transition-colors"
                   >
                     <span className="font-semibold">{user.name}</span>

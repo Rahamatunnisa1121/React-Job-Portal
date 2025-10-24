@@ -525,6 +525,8 @@
         "c90f",
         "ac7a"
       ],
+      "isBeingEdited": false,
+      "editingBy": null,
       "companyPhoto": "https://4g-s3-upload.s3.ap-south-1.amazonaws.com/ruhi/company_photos/1761201126360_company_photos_1761286019769.jpeg&embedded=true",
       "draft": {
         "name": "L4G Solutions",
@@ -533,6 +535,17 @@
         "email": "l4g123@gmail.com",
         "companyPhoto": "https://4g-s3-upload.s3.ap-south-1.amazonaws.com/ruhi/company_photos/1761201126360_company_photos_1761286019769.jpeg&embedded=true"
       }
+    },
+    {
+      "id": "1761327473543",
+      "name": "TCS",
+      "description": "Service-based Software Company",
+      "industry": "Technology",
+      "email": "tcs@gmail.com",
+      "password": "tcs123",
+      "employerIds": [],
+      "isBeingEdited": false,
+      "editingBy": null
     }
   ],
   "employers": [
