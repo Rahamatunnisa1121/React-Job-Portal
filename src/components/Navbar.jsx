@@ -104,14 +104,6 @@ const Navbar = () => {
                       <span className="hidden xl:inline">Add Employer</span>
                     </NavLink>
 
-                    <NavLink
-                      to="/company-profile"
-                      className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 px-3 rounded transition-colors duration-200 text-sm"
-                      title="Edit Company Profile"
-                    >
-                      <Building2 className="h-4 w-4" />
-                      <span className="hidden xl:inline">Edit Profile</span>
-                    </NavLink>
                   </div>
                 )}
 
