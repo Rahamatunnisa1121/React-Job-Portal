@@ -515,7 +515,7 @@
     {
       "id": "1761201126360",
       "name": "L4G Solutions",
-      "description": "L4G Solutions Private Limited is a software company located in Hyderabad.",
+      "description": "L4G is a software company located in Hyderabad.",
       "industry": "Technology",
       "email": "l4g123@gmail.com",
       "password": "l4gl4g",
@@ -525,7 +525,14 @@
         "c90f",
         "ac7a"
       ],
-      "companyPhoto": "https://4g-s3-upload.s3.ap-south-1.amazonaws.com/ruhi/company_photos/1761201126360_company_photos_1761286019769.jpeg&embedded=true"
+      "companyPhoto": "https://4g-s3-upload.s3.ap-south-1.amazonaws.com/ruhi/company_photos/1761201126360_company_photos_1761286019769.jpeg&embedded=true",
+      "draft": {
+        "name": "L4G Solutions",
+        "description": "L4G is a software company located in Hyderabad, Telangana.",
+        "industry": "Technology",
+        "email": "l4g123@gmail.com",
+        "companyPhoto": "https://4g-s3-upload.s3.ap-south-1.amazonaws.com/ruhi/company_photos/1761201126360_company_photos_1761286019769.jpeg&embedded=true"
+      }
     }
   ],
   "employers": [

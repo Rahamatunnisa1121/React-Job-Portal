@@ -15,6 +15,10 @@ import {
   EyeOff,
   Camera,
   ArrowRight,
+  AlertCircle,
+  Trash2,
+  CheckCircle,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -35,7 +39,7 @@ const YOUR_NAME = import.meta.env.VITE_YOUR_NAME;
 
 const CompanyProfile = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
 
   const [companyData, setCompanyData] = useState(null);
   const [employersCount, setEmployersCount] = useState(0);
@@ -47,6 +51,12 @@ const CompanyProfile = () => {
   const [photoPreview, setPhotoPreview] = useState(null);
   const [existingPhotoUrl, setExistingPhotoUrl] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Draft states
+  const [hasDraft, setHasDraft] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [draftData, setDraftData] = useState(null);
+  const [message, setMessage] = useState({ type: "", text: "" });
 
   const [formData, setFormData] = useState({
     name: "",
@@ -60,6 +70,34 @@ const CompanyProfile = () => {
   useEffect(() => {
     fetchCompanyData();
   }, []);
+
+  useEffect(() => {
+    if (companyData) {
+      // Check if company has draft data
+      const hasSavedDraft =
+        companyData.draft && Object.keys(companyData.draft).length > 0;
+      setHasDraft(hasSavedDraft);
+      setDraftData(companyData.draft);
+
+      // Load either draft or published data when editing
+      const dataToLoad =
+        hasSavedDraft && editMode ? companyData.draft : companyData;
+
+      setFormData({
+        name: dataToLoad.name || "",
+        description: dataToLoad.description || "",
+        industry: dataToLoad.industry || "",
+        email: dataToLoad.email || "",
+        password: "",
+        companyPhoto: dataToLoad.companyPhoto || "",
+      });
+
+      if (dataToLoad.companyPhoto) {
+        setExistingPhotoUrl(dataToLoad.companyPhoto);
+        setPhotoPreview(dataToLoad.companyPhoto);
+      }
+    }
+  }, [companyData, editMode]);
 
   const fetchCompanyData = async () => {
     try {
@@ -79,7 +117,7 @@ const CompanyProfile = () => {
         description: company.description || "",
         industry: company.industry || "",
         email: company.email || "",
-        password: company.password || "",
+        password: "",
         companyPhoto: company.companyPhoto || "",
       });
 
@@ -89,7 +127,7 @@ const CompanyProfile = () => {
       }
     } catch (error) {
       console.error("Error fetching company data:", error);
-      alert("Failed to load company data");
+      setMessage({ type: "error", text: "Failed to load company data" });
     } finally {
       setLoading(false);
     }
@@ -99,7 +137,10 @@ const CompanyProfile = () => {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        alert("File size should be less than 5MB");
+        setMessage({
+          type: "error",
+          text: "File size should be less than 5MB",
+        });
         return;
       }
 
@@ -147,9 +188,176 @@ const CompanyProfile = () => {
     }
   };
 
+  const validateForm = () => {
+    if (!formData.name.trim()) return "Company name is required";
+    if (!formData.email.trim()) return "Email is required";
+    if (!formData.industry) return "Industry is required";
+    if (!formData.description.trim()) return "Description is required";
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email.trim()))
+      return "Please enter a valid email address";
+
+    if (formData.password && formData.password.length < 6) {
+      return "Password must be at least 6 characters long";
+    }
+
+    return null;
+  };
+
+  // New function: Save as Draft
+  const handleSaveAsDraft = async () => {
+    const validationError = validateForm();
+    if (validationError) {
+      setMessage({ type: "error", text: validationError });
+      return;
+    }
+
+    setIsSavingDraft(true);
+    setMessage({ type: "", text: "" });
+
+    try {
+      let companyPhotoUrl = existingPhotoUrl;
+
+      if (companyPhoto) {
+        try {
+          companyPhotoUrl = await uploadToS3(companyPhoto, "company_photos");
+        } catch (error) {
+          setMessage({ type: "error", text: "Failed to upload company photo" });
+          setIsSavingDraft(false);
+          return;
+        }
+      }
+
+      // Prepare draft data object
+      const draftObject = {
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        industry: formData.industry,
+        email: formData.email.trim(),
+        companyPhoto: companyPhotoUrl,
+      };
+
+      // Add password only if changed
+      if (formData.password && formData.password.trim()) {
+        draftObject.password = formData.password;
+      }
+
+      // First, get the current company data
+      const getCurrentCompany = await fetch(`/api/companies/${user.id}`);
+      if (!getCurrentCompany.ok)
+        throw new Error("Failed to fetch current company");
+      const currentCompany = await getCurrentCompany.json();
+
+      // Update company with draft data using PATCH
+      const response = await fetch(`/api/companies/${user.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...currentCompany,
+          draft: draftObject,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to save draft");
+      const updatedCompany = await response.json();
+
+      // Update local state with draft
+      setCompanyData(updatedCompany);
+      setHasDraft(true);
+      setDraftData(updatedCompany.draft);
+
+      // Clear file inputs but keep form data
+      setCompanyPhoto(null);
+
+      // Update previews
+      setPhotoPreview(companyPhotoUrl || "");
+      setExistingPhotoUrl(companyPhotoUrl);
+
+      setMessage({
+        type: "success",
+        text: "✅ Draft saved successfully! Your changes are not yet visible to others.",
+      });
+    } catch (error) {
+      console.error("Error saving draft:", error);
+      setMessage({
+        type: "error",
+        text: "Failed to save draft. Please try again.",
+      });
+    } finally {
+      setIsSavingDraft(false);
+      setUploadProgress(0);
+    }
+  };
+
+  // New function: Discard Draft
+  const handleDiscardDraft = async () => {
+    if (
+      !window.confirm(
+        "Are you sure you want to discard your draft? This cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      // Get current company data
+      const getCurrentCompany = await fetch(`/api/companies/${user.id}`);
+      if (!getCurrentCompany.ok)
+        throw new Error("Failed to fetch current company");
+      const currentCompany = await getCurrentCompany.json();
+
+      // Remove draft field
+      const { draft, ...companyWithoutDraft } = currentCompany;
+
+      // Update company without draft
+      const response = await fetch(`/api/companies/${user.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(companyWithoutDraft),
+      });
+
+      if (!response.ok) throw new Error("Failed to discard draft");
+      const updatedCompany = await response.json();
+
+      setCompanyData(updatedCompany);
+      setHasDraft(false);
+      setDraftData(null);
+
+      // Reset form to published data
+      setFormData({
+        name: updatedCompany.name || "",
+        description: updatedCompany.description || "",
+        industry: updatedCompany.industry || "",
+        email: updatedCompany.email || "",
+        password: "",
+        companyPhoto: updatedCompany.companyPhoto || "",
+      });
+
+      setCompanyPhoto(null);
+      setPhotoPreview(updatedCompany.companyPhoto || "");
+      setExistingPhotoUrl(updatedCompany.companyPhoto || "");
+
+      setMessage({ type: "success", text: "Draft discarded successfully!" });
+    } catch (error) {
+      console.error("Error discarding draft:", error);
+      setMessage({
+        type: "error",
+        text: "Failed to discard draft. Please try again.",
+      });
+    }
+  };
+
   const handleSave = async () => {
+    const validationError = validateForm();
+    if (validationError) {
+      setMessage({ type: "error", text: validationError });
+      return;
+    }
+
     try {
       setIsSaving(true);
+      setMessage({ type: "", text: "" });
 
       let companyPhotoUrl = existingPhotoUrl;
 
@@ -157,10 +365,36 @@ const CompanyProfile = () => {
         companyPhotoUrl = await uploadToS3(companyPhoto, "company_photos");
       }
 
+      // Get current company data first
+      const getCurrentCompany = await fetch(`/api/companies/${user.id}`);
+      if (!getCurrentCompany.ok)
+        throw new Error("Failed to fetch current company");
+      const currentCompany = await getCurrentCompany.json();
+
+      // If there's a draft, use draft data as the source, otherwise use form data
+      const sourceData =
+        hasDraft && currentCompany.draft ? currentCompany.draft : formData;
+
+      // Build update data and explicitly set draft to null to remove it
       const updateData = {
-        ...formData,
+        id: currentCompany.id,
+        name: sourceData.name?.trim() || formData.name.trim(),
+        description:
+          sourceData.description?.trim() || formData.description.trim(),
+        industry: sourceData.industry || formData.industry,
+        email: sourceData.email?.trim() || formData.email.trim(),
         companyPhoto: companyPhotoUrl,
+        employerIds: currentCompany.employerIds || [],
+        draft: null, // Explicitly set to null to remove draft from database
       };
+
+      // Add password only if changed (check both draft and form)
+      const draftPassword = hasDraft && currentCompany.draft?.password;
+      const formPassword = formData.password && formData.password.trim();
+
+      if (draftPassword || formPassword) {
+        updateData.password = draftPassword || formPassword;
+      }
 
       const response = await fetch(`/api/companies/${user.id}`, {
         method: "PATCH",
@@ -176,14 +410,41 @@ const CompanyProfile = () => {
       }
 
       const updatedCompany = await response.json();
+
+      // Clear draft state immediately after successful publish
       setCompanyData(updatedCompany);
+      setHasDraft(false);
+      setDraftData(null);
       setExistingPhotoUrl(companyPhotoUrl);
       setCompanyPhoto(null);
+
+      // Reset form data to published values (no draft)
+      setFormData({
+        name: updatedCompany.name || "",
+        description: updatedCompany.description || "",
+        industry: updatedCompany.industry || "",
+        email: updatedCompany.email || "",
+        password: "",
+        companyPhoto: updatedCompany.companyPhoto || "",
+      });
+
       setEditMode(false);
-      alert("Company profile updated successfully!");
+
+      setMessage({
+        type: "success",
+        text: "✨ Company profile published successfully! Draft has been removed.",
+      });
+
+      // Update user context if needed
+      if (updateUser) {
+        updateUser({ ...user, company: updatedCompany });
+      }
     } catch (error) {
       console.error("Error updating company:", error);
-      alert(`Failed to update company: ${error.message}`);
+      setMessage({
+        type: "error",
+        text: `Failed to update company: ${error.message}`,
+      });
     } finally {
       setIsSaving(false);
       setUploadProgress(0);
@@ -196,13 +457,14 @@ const CompanyProfile = () => {
       description: companyData.description || "",
       industry: companyData.industry || "",
       email: companyData.email || "",
-      password: companyData.password || "",
+      password: "",
       companyPhoto: companyData.companyPhoto || "",
     });
     setPhotoPreview(existingPhotoUrl);
     setCompanyPhoto(null);
     setEditMode(false);
     setUploadProgress(0);
+    setMessage({ type: "", text: "" });
   };
 
   if (loading) {
@@ -319,6 +581,24 @@ const CompanyProfile = () => {
                 )}
               </div>
 
+              {/* Message Alert */}
+              {message.text && (
+                <div
+                  className={`flex items-center gap-2 p-3 mb-6 rounded-lg ${
+                    message.type === "success"
+                      ? "bg-green-50 border border-green-200 text-green-700"
+                      : "bg-red-50 border border-red-200 text-red-700"
+                  }`}
+                >
+                  {message.type === "success" ? (
+                    <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                  )}
+                  <span className="text-sm">{message.text}</span>
+                </div>
+              )}
+
               <div className="space-y-6">
                 {/* Company Logo Upload - Only in Edit Mode */}
                 {editMode && (
@@ -347,7 +627,7 @@ const CompanyProfile = () => {
                             accept="image/*"
                             onChange={handlePhotoChange}
                             className="hidden"
-                            disabled={isSaving}
+                            disabled={isSaving || isSavingDraft}
                           />
                         </label>
                         <p className="text-sm text-gray-500 mt-2">
@@ -388,7 +668,7 @@ const CompanyProfile = () => {
                       className="w-full border-2 border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-lg"
                       placeholder="Enter company name"
                       required
-                      disabled={isSaving}
+                      disabled={isSaving || isSavingDraft}
                     />
                   ) : (
                     <p className="text-gray-900 text-lg font-medium bg-gray-50 px-4 py-3.5 rounded-xl border border-gray-200">
@@ -416,7 +696,7 @@ const CompanyProfile = () => {
                       className="w-full border-2 border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all min-h-[120px] text-lg"
                       placeholder="Enter company description"
                       required
-                      disabled={isSaving}
+                      disabled={isSaving || isSavingDraft}
                     />
                   ) : (
                     <p className="text-gray-900 text-lg bg-gray-50 px-4 py-3.5 rounded-xl whitespace-pre-wrap border border-gray-200 leading-relaxed">
@@ -440,7 +720,7 @@ const CompanyProfile = () => {
                       }
                       className="w-full border-2 border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-lg"
                       required
-                      disabled={isSaving}
+                      disabled={isSaving || isSavingDraft}
                     >
                       <option value="">Select industry</option>
                       <option value="Technology">Technology</option>
@@ -481,7 +761,7 @@ const CompanyProfile = () => {
                       className="w-full border-2 border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-lg"
                       placeholder="company@example.com"
                       required
-                      disabled={isSaving}
+                      disabled={isSaving || isSavingDraft}
                     />
                   ) : (
                     <p className="text-gray-900 text-lg font-medium bg-gray-50 px-4 py-3.5 rounded-xl border border-gray-200">
@@ -494,8 +774,7 @@ const CompanyProfile = () => {
                 <div>
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
                     <Lock className="w-4 h-4 text-blue-600" />
-                    Password{" "}
-                    {editMode && <span className="text-red-500">*</span>}
+                    Password
                   </label>
                   {editMode ? (
                     <div>
@@ -510,10 +789,9 @@ const CompanyProfile = () => {
                             })
                           }
                           className="w-full border-2 border-gray-200 rounded-xl px-4 py-3.5 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-lg"
-                          placeholder="Enter password"
-                          required
+                          placeholder="Leave blank to keep current password"
                           minLength={6}
-                          disabled={isSaving}
+                          disabled={isSaving || isSavingDraft}
                         />
                         <button
                           type="button"
@@ -528,7 +806,8 @@ const CompanyProfile = () => {
                         </button>
                       </div>
                       <p className="text-sm text-gray-500 mt-2">
-                        Password must be at least 6 characters long
+                        Leave blank to keep current password. Must be at least 6
+                        characters if changing.
                       </p>
                     </div>
                   ) : (
@@ -541,32 +820,109 @@ const CompanyProfile = () => {
 
               {/* Action Buttons */}
               {editMode && (
-                <div className="flex gap-4 mt-8 pt-6 border-t border-gray-200">
-                  <button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-semibold transition-all shadow-lg hover:shadow-xl"
-                  >
-                    {isSaving ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Saving Changes...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-5 h-5" />
-                        Save Changes
-                      </>
+                <div className="space-y-3 pt-6 border-t border-gray-200">
+                  {/* Draft indicator */}
+                  {hasDraft && (
+                    <div className="w-full p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                        <span className="text-sm text-amber-700 font-medium">
+                          📝 You have unpublished draft changes that only you
+                          can see
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-3">
+                    {/* Save as Draft Button */}
+                    <button
+                      onClick={handleSaveAsDraft}
+                      disabled={isSavingDraft || isSaving}
+                      className="flex-1 min-w-[160px] flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+                    >
+                      {isSavingDraft ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Saving Draft...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4" />
+                          Save as Draft
+                        </>
+                      )}
+                    </button>
+
+                    {/* Publish Button */}
+                    <button
+                      onClick={handleSave}
+                      disabled={isSaving || isSavingDraft}
+                      className="flex-1 min-w-[160px] flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          {uploadProgress > 0 && uploadProgress < 100
+                            ? `Uploading... ${uploadProgress}%`
+                            : "Publishing..."}
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="h-4 w-4" />
+                          {hasDraft ? "Publish Changes" : "Save & Publish"}
+                        </>
+                      )}
+                    </button>
+
+                    {/* Cancel Button */}
+                    <button
+                      onClick={handleCancel}
+                      disabled={isSaving || isSavingDraft}
+                      className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Cancel
+                    </button>
+
+                    {/* Discard Draft Button (only show if draft exists) */}
+                    {hasDraft && (
+                      <button
+                        onClick={handleDiscardDraft}
+                        disabled={isSaving || isSavingDraft}
+                        className="px-4 py-3 border-2 border-red-300 text-red-700 rounded-lg font-medium hover:bg-red-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        title="Discard draft and revert to published version"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Discard Draft
+                      </button>
                     )}
-                  </button>
-                  <button
-                    onClick={handleCancel}
-                    disabled={isSaving}
-                    className="flex-1 bg-gray-100 text-gray-700 px-6 py-4 rounded-xl hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-semibold transition-all"
-                  >
-                    <X className="w-5 h-5" />
-                    Cancel
-                  </button>
+                  </div>
+
+                  {/* Info Box */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                    <div className="flex gap-3">
+                      <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-blue-700">
+                        <p className="font-semibold mb-1">
+                          💡 How Draft Mode Works:
+                        </p>
+                        <ul className="space-y-1 ml-4 list-disc">
+                          <li>
+                            <strong>Save as Draft:</strong> Save your changes
+                            privately - only you can see them
+                          </li>
+                          <li>
+                            <strong>Publish Changes:</strong> Make your changes
+                            visible to everyone
+                          </li>
+                          <li>
+                            <strong>Discard Draft:</strong> Delete draft and
+                            revert to published version
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -619,6 +975,30 @@ const CompanyProfile = () => {
                   <ArrowRight className="w-5 h-5 text-purple-600 group-hover:translate-x-1 transition-transform" />
                 </button>
               </div>
+
+              {/* Draft Status Card */}
+              {hasDraft && !editMode && (
+                <div className="mt-6 p-4 bg-amber-50 border-2 border-amber-200 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-amber-900 text-sm mb-1">
+                        Unpublished Changes
+                      </p>
+                      <p className="text-xs text-amber-700 mb-3">
+                        You have draft changes that aren't visible to others
+                        yet.
+                      </p>
+                      <button
+                        onClick={() => setEditMode(true)}
+                        className="text-xs font-medium text-amber-700 hover:text-amber-900 underline"
+                      >
+                        Review Draft →
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
