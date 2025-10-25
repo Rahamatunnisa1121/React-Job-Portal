@@ -59,6 +59,15 @@ const CompanyProfile = () => {
   const [canSeeDraft, setCanSeeDraft] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
 
+  // Editing lock states
+  const [isBeingEditedByOther, setIsBeingEditedByOther] = useState(false);
+  const [editingByUser, setEditingByUser] = useState(null);
+  const [canEdit, setCanEdit] = useState(true);
+
+  // Auto-refresh interval to check lock status
+  const LOCK_CHECK_INTERVAL = 5000; // Check every 5 seconds
+  const LOCK_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -80,7 +89,38 @@ const CompanyProfile = () => {
 
   useEffect(() => {
     fetchCompanyData();
+    // Initial lock check
+    checkEditingLock();
   }, []);
+
+  // Check editing lock status periodically
+  useEffect(() => {
+    if (!editMode) {
+      const interval = setInterval(() => {
+        checkEditingLock();
+      }, LOCK_CHECK_INTERVAL);
+
+      return () => clearInterval(interval);
+    }
+  }, [editMode]);
+
+  // Clean up lock when component unmounts or edit mode exits
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (editMode) {
+        releaseLock();
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      if (editMode) {
+        releaseLock();
+      }
+    };
+  }, [editMode]);
 
   useEffect(() => {
     if (companyData) {
@@ -151,6 +191,170 @@ const CompanyProfile = () => {
       setMessage({ type: "error", text: "Failed to load company data" });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Check if the company is being edited by someone else
+  const checkEditingLock = async () => {
+    try {
+      const companyId = getCompanyId();
+      if (!companyId) return;
+
+      const response = await fetch(`/api/companies/${companyId}`);
+      if (!response.ok) return;
+
+      const company = await response.json();
+
+      // Check if lock has expired (older than 10 minutes)
+      if (company.isBeingEdited && company.editingStartTime) {
+        const lockAge = Date.now() - company.editingStartTime;
+        if (lockAge > LOCK_TIMEOUT) {
+          // Auto-clear expired lock
+          await releaseLockForce(companyId);
+          setIsBeingEditedByOther(false);
+          setEditingByUser(null);
+          setCanEdit(true);
+          return;
+        }
+      }
+
+      // Check if being edited by another user
+      if (
+        company.isBeingEdited &&
+        company.editingBy &&
+        company.editingBy !== user.id
+      ) {
+        setIsBeingEditedByOther(true);
+        setEditingByUser(company.editingByName || "Another user");
+        setCanEdit(false);
+      } else {
+        setIsBeingEditedByOther(false);
+        setEditingByUser(null);
+        setCanEdit(true);
+      }
+    } catch (error) {
+      console.error("Error checking editing lock:", error);
+    }
+  };
+
+  // Acquire editing lock
+  const acquireLock = async () => {
+    try {
+      const companyId = getCompanyId();
+      if (!companyId) {
+        throw new Error("Unable to determine company ID");
+      }
+
+      // Fetch current company state
+      const response = await fetch(`/api/companies/${companyId}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch company data");
+      }
+
+      const company = await response.json();
+
+      // Check if lock has expired
+      if (company.isBeingEdited && company.editingStartTime) {
+        const lockAge = Date.now() - company.editingStartTime;
+        if (lockAge > LOCK_TIMEOUT) {
+          // Expired lock, we can proceed
+          console.log("Lock expired, acquiring new lock");
+        } else if (company.editingBy && company.editingBy !== user.id) {
+          // Someone else is editing
+          setIsBeingEditedByOther(true);
+          setEditingByUser(company.editingByName || "Another user");
+          setCanEdit(false);
+          setMessage({
+            type: "error",
+            text: `This profile is currently being edited by ${
+              company.editingByName || "another user"
+            }. Please try again later.`,
+          });
+          return false;
+        }
+      }
+
+      // Acquire the lock
+      const updateResponse = await fetch(`/api/companies/${companyId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...company,
+          isBeingEdited: true,
+          editingBy: user.id,
+          editingByName: user.name || "Unknown User",
+          editingStartTime: Date.now(),
+        }),
+      });
+
+      if (!updateResponse.ok) {
+        throw new Error("Failed to acquire editing lock");
+      }
+
+      setCanEdit(true);
+      setIsBeingEditedByOther(false);
+      return true;
+    } catch (error) {
+      console.error("Error acquiring lock:", error);
+      setMessage({
+        type: "error",
+        text: "Failed to start editing. Please try again.",
+      });
+      return false;
+    }
+  };
+
+  // Release editing lock
+  const releaseLock = async () => {
+    try {
+      const companyId = getCompanyId();
+      if (!companyId) return;
+
+      const response = await fetch(`/api/companies/${companyId}`);
+      if (!response.ok) return;
+
+      const company = await response.json();
+
+      // Only release if we are the ones who locked it
+      if (company.editingBy === user.id) {
+        await fetch(`/api/companies/${companyId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...company,
+            isBeingEdited: false,
+            editingBy: null,
+            editingByName: null,
+            editingStartTime: null,
+          }),
+        });
+      }
+    } catch (error) {
+      console.error("Error releasing lock:", error);
+    }
+  };
+
+  // Force release lock (for expired locks)
+  const releaseLockForce = async (companyId) => {
+    try {
+      const response = await fetch(`/api/companies/${companyId}`);
+      if (!response.ok) return;
+
+      const company = await response.json();
+
+      await fetch(`/api/companies/${companyId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...company,
+          isBeingEdited: false,
+          editingBy: null,
+          editingByName: null,
+          editingStartTime: null,
+        }),
+      });
+    } catch (error) {
+      console.error("Error force releasing lock:", error);
     }
   };
 
@@ -489,6 +693,9 @@ const CompanyProfile = () => {
 
       setEditMode(false);
 
+      // Release the editing lock
+      await releaseLock();
+
       setMessage({
         type: "success",
         text: "✨ Company profile published successfully! Your draft has been removed.",
@@ -510,7 +717,27 @@ const CompanyProfile = () => {
     }
   };
 
-  const handleCancel = () => {
+  const handleEdit = async () => {
+    // Check current lock status first
+    await checkEditingLock();
+
+    if (isBeingEditedByOther) {
+      setMessage({
+        type: "error",
+        text: `This profile is currently being edited by ${editingByUser}. Please try again later.`,
+      });
+      return;
+    }
+
+    // Try to acquire lock
+    const lockAcquired = await acquireLock();
+    if (lockAcquired) {
+      setEditMode(true);
+      setMessage({ type: "", text: "" });
+    }
+  };
+
+  const handleCancel = async () => {
     setFormData({
       name: companyData.name || "",
       description: companyData.description || "",
@@ -524,6 +751,9 @@ const CompanyProfile = () => {
     setEditMode(false);
     setUploadProgress(0);
     setMessage({ type: "", text: "" });
+
+    // Release the editing lock
+    await releaseLock();
   };
 
   if (loading) {
@@ -564,15 +794,46 @@ const CompanyProfile = () => {
             </div>
             {!editMode && (
               <button
-                onClick={() => setEditMode(true)}
-                className="bg-white text-blue-600 px-6 py-3 rounded-xl hover:bg-blue-50 flex items-center gap-2 font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105"
+                onClick={handleEdit}
+                disabled={isBeingEditedByOther}
+                className={`px-6 py-3 rounded-xl flex items-center gap-2 font-semibold transition-all shadow-lg ${
+                  isBeingEditedByOther
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-white text-blue-600 hover:bg-blue-50 hover:shadow-xl hover:scale-105"
+                }`}
+                title={
+                  isBeingEditedByOther
+                    ? `Being edited by ${editingByUser}`
+                    : "Edit Profile"
+                }
               >
                 <Edit className="w-5 h-5" />
-                Edit Profile
+                {isBeingEditedByOther ? "Editing Locked" : "Edit Profile"}
               </button>
             )}
           </div>
         </div>
+
+        {/* Editing Lock Warning Banner */}
+        {isBeingEditedByOther && !editMode && (
+          <div className="mb-6 bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-4 shadow-md">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center flex-shrink-0">
+                <Lock className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-yellow-900 text-lg">
+                  🔒 Profile Currently Being Edited
+                </p>
+                <p className="text-yellow-700 text-sm mt-1">
+                  <strong>{editingByUser}</strong> is currently editing this
+                  company profile. You can view the profile but cannot make
+                  changes until they finish editing.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -997,9 +1258,13 @@ const CompanyProfile = () => {
                       <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                       <div className="text-sm text-blue-700">
                         <p className="font-semibold mb-1">
-                          💡 How Draft Mode Works:
+                          💡 How Draft & Editing Works:
                         </p>
                         <ul className="space-y-1 ml-4 list-disc">
+                          <li>
+                            <strong>Editing Lock:</strong> Only one person can
+                            edit at a time (auto-expires after 10 minutes)
+                          </li>
                           <li>
                             <strong>Save as Draft:</strong> Save your changes
                             privately - only you can see them
@@ -1087,11 +1352,36 @@ const CompanyProfile = () => {
                         yet.
                       </p>
                       <button
-                        onClick={() => setEditMode(true)}
-                        className="text-xs font-medium text-amber-700 hover:text-amber-900 underline"
+                        onClick={handleEdit}
+                        disabled={isBeingEditedByOther}
+                        className={`text-xs font-medium underline ${
+                          isBeingEditedByOther
+                            ? "text-gray-400 cursor-not-allowed"
+                            : "text-amber-700 hover:text-amber-900"
+                        }`}
                       >
-                        Review Draft →
+                        {isBeingEditedByOther
+                          ? "Locked by another user"
+                          : "Review Draft →"}
                       </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Editing Lock Status in Sidebar */}
+              {isBeingEditedByOther && !editMode && (
+                <div className="mt-6 p-4 bg-red-50 border-2 border-red-200 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <Lock className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-red-900 text-sm mb-1">
+                        🔒 Editing Locked
+                      </p>
+                      <p className="text-xs text-red-700">
+                        <strong>{editingByUser}</strong> is currently editing
+                        this profile.
+                      </p>
                     </div>
                   </div>
                 </div>

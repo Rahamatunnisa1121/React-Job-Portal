@@ -310,6 +310,8 @@ const Signup = () => {
           employerIds: [],
           isBeingEdited: false,
           editingBy: null,
+          editingByName: null,
+          editingStartTime: null,
         }),
       });
 
