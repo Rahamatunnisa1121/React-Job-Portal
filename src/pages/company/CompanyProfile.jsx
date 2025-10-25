@@ -56,6 +56,7 @@ const CompanyProfile = () => {
   const [hasDraft, setHasDraft] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [draftData, setDraftData] = useState(null);
+  const [canSeeDraft, setCanSeeDraft] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
 
   const [formData, setFormData] = useState({
@@ -67,21 +68,35 @@ const CompanyProfile = () => {
     companyPhoto: "",
   });
 
+  // Get the company ID correctly based on user type
+  const getCompanyId = () => {
+    if (isCompany()) {
+      return user.id;
+    } else if (isEmployer()) {
+      return user.companyId;
+    }
+    return null;
+  };
+
   useEffect(() => {
     fetchCompanyData();
   }, []);
 
   useEffect(() => {
     if (companyData) {
-      // Check if company has draft data
-      const hasSavedDraft =
-        companyData.draft && Object.keys(companyData.draft).length > 0;
-      setHasDraft(hasSavedDraft);
-      setDraftData(companyData.draft);
+      // drafts is now an object with userId as keys: { userId1: draftData1, userId2: draftData2 }
+      const drafts = companyData.drafts || {};
+      const userDraft = drafts[user.id];
 
-      // Load either draft or published data when editing
-      const dataToLoad =
-        hasSavedDraft && editMode ? companyData.draft : companyData;
+      // Check if current user has a draft
+      const hasUserDraft = userDraft && Object.keys(userDraft).length > 0;
+
+      setHasDraft(hasUserDraft);
+      setCanSeeDraft(hasUserDraft);
+      setDraftData(userDraft);
+
+      // Load either user's draft or published data when editing
+      const dataToLoad = hasUserDraft && editMode ? userDraft : companyData;
 
       setFormData({
         name: dataToLoad.name || "",
@@ -97,17 +112,18 @@ const CompanyProfile = () => {
         setPhotoPreview(dataToLoad.companyPhoto);
       }
     }
-  }, [companyData, editMode]);
+  }, [companyData, editMode, user.id]);
 
   const fetchCompanyData = async () => {
     try {
       setLoading(true);
-      let response;
-      if (isCompany()) {
-        response = await fetch(`/api/companies/${user.id}`);
-      } else if (isEmployer()) {
-        response = await fetch(`/api/companies/${user.companyId}`);
+      const companyId = getCompanyId();
+
+      if (!companyId) {
+        throw new Error("Unable to determine company ID");
       }
+
+      const response = await fetch(`/api/companies/${companyId}`);
 
       if (!response.ok) {
         throw new Error("Failed to fetch company data");
@@ -210,7 +226,7 @@ const CompanyProfile = () => {
     return null;
   };
 
-  // New function: Save as Draft
+  // Save as Draft
   const handleSaveAsDraft = async () => {
     const validationError = validateForm();
     if (validationError) {
@@ -222,6 +238,7 @@ const CompanyProfile = () => {
     setMessage({ type: "", text: "" });
 
     try {
+      const companyId = getCompanyId();
       let companyPhotoUrl = existingPhotoUrl;
 
       if (companyPhoto) {
@@ -234,13 +251,15 @@ const CompanyProfile = () => {
         }
       }
 
-      // Prepare draft data object
+      // Prepare draft data object with creator ID
       const draftObject = {
         name: formData.name.trim(),
         description: formData.description.trim(),
         industry: formData.industry,
         email: formData.email.trim(),
         companyPhoto: companyPhotoUrl,
+        createdBy: user.id,
+        createdAt: new Date().toISOString(),
       };
 
       // Add password only if changed
@@ -248,29 +267,35 @@ const CompanyProfile = () => {
         draftObject.password = formData.password;
       }
 
-      // First, get the current company data
-      const getCurrentCompany = await fetch(`/api/companies/${user.id}`);
+      // Get the current company data
+      const getCurrentCompany = await fetch(`/api/companies/${companyId}`);
       if (!getCurrentCompany.ok)
         throw new Error("Failed to fetch current company");
       const currentCompany = await getCurrentCompany.json();
 
-      // Update company with draft data using PATCH
-      const response = await fetch(`/api/companies/${user.id}`, {
+      // Get existing drafts object or create new one
+      const drafts = currentCompany.drafts || {};
+
+      // Update company with user's draft in the drafts object
+      drafts[user.id] = draftObject;
+
+      const response = await fetch(`/api/companies/${companyId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...currentCompany,
-          draft: draftObject,
+          drafts: drafts,
         }),
       });
 
       if (!response.ok) throw new Error("Failed to save draft");
       const updatedCompany = await response.json();
 
-      // Update local state with draft
+      // Update local state with user's draft
       setCompanyData(updatedCompany);
       setHasDraft(true);
-      setDraftData(updatedCompany.draft);
+      setCanSeeDraft(true);
+      setDraftData(updatedCompany.drafts[user.id]);
 
       // Clear file inputs but keep form data
       setCompanyPhoto(null);
@@ -279,9 +304,14 @@ const CompanyProfile = () => {
       setPhotoPreview(companyPhotoUrl || "");
       setExistingPhotoUrl(companyPhotoUrl);
 
+      // Count how many drafts exist
+      const draftCount = Object.keys(updatedCompany.drafts || {}).length;
+      const draftInfo =
+        draftCount > 1 ? ` (${draftCount} drafts in progress)` : "";
+
       setMessage({
         type: "success",
-        text: "✅ Draft saved successfully! Your changes are not yet visible to others.",
+        text: `✅ Draft saved successfully! Your changes are not yet visible to others.${draftInfo}`,
       });
     } catch (error) {
       console.error("Error saving draft:", error);
@@ -295,8 +325,16 @@ const CompanyProfile = () => {
     }
   };
 
-  // New function: Discard Draft
+  // Discard Draft
   const handleDiscardDraft = async () => {
+    if (!canSeeDraft) {
+      setMessage({
+        type: "error",
+        text: "You don't have any draft to discard.",
+      });
+      return;
+    }
+
     if (
       !window.confirm(
         "Are you sure you want to discard your draft? This cannot be undone."
@@ -306,20 +344,26 @@ const CompanyProfile = () => {
     }
 
     try {
+      const companyId = getCompanyId();
+
       // Get current company data
-      const getCurrentCompany = await fetch(`/api/companies/${user.id}`);
+      const getCurrentCompany = await fetch(`/api/companies/${companyId}`);
       if (!getCurrentCompany.ok)
         throw new Error("Failed to fetch current company");
       const currentCompany = await getCurrentCompany.json();
 
-      // Remove draft field
-      const { draft, ...companyWithoutDraft } = currentCompany;
+      // Get existing drafts and remove current user's draft
+      const drafts = { ...(currentCompany.drafts || {}) };
+      delete drafts[user.id];
 
-      // Update company without draft
-      const response = await fetch(`/api/companies/${user.id}`, {
+      // Update company without user's draft
+      const response = await fetch(`/api/companies/${companyId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(companyWithoutDraft),
+        body: JSON.stringify({
+          ...currentCompany,
+          drafts: drafts,
+        }),
       });
 
       if (!response.ok) throw new Error("Failed to discard draft");
@@ -327,6 +371,7 @@ const CompanyProfile = () => {
 
       setCompanyData(updatedCompany);
       setHasDraft(false);
+      setCanSeeDraft(false);
       setDraftData(null);
 
       // Reset form to published data
@@ -364,6 +409,7 @@ const CompanyProfile = () => {
       setIsSaving(true);
       setMessage({ type: "", text: "" });
 
+      const companyId = getCompanyId();
       let companyPhotoUrl = existingPhotoUrl;
 
       if (companyPhoto) {
@@ -371,16 +417,23 @@ const CompanyProfile = () => {
       }
 
       // Get current company data first
-      const getCurrentCompany = await fetch(`/api/companies/${user.id}`);
+      const getCurrentCompany = await fetch(`/api/companies/${companyId}`);
       if (!getCurrentCompany.ok)
         throw new Error("Failed to fetch current company");
       const currentCompany = await getCurrentCompany.json();
 
-      // If there's a draft, use draft data as the source, otherwise use form data
-      const sourceData =
-        hasDraft && currentCompany.draft ? currentCompany.draft : formData;
+      // Check if current user has a draft
+      const userDraft = currentCompany.drafts?.[user.id];
+      const hasUserDraft = userDraft && Object.keys(userDraft).length > 0;
 
-      // Build update data and explicitly set draft to null to remove it
+      // If user has a draft, use draft data as the source, otherwise use form data
+      const sourceData = hasUserDraft ? userDraft : formData;
+
+      // Remove only the current user's draft, keep other users' drafts
+      const remainingDrafts = { ...(currentCompany.drafts || {}) };
+      delete remainingDrafts[user.id];
+
+      // Build update data
       const updateData = {
         id: currentCompany.id,
         name: sourceData.name?.trim() || formData.name.trim(),
@@ -390,18 +443,18 @@ const CompanyProfile = () => {
         email: sourceData.email?.trim() || formData.email.trim(),
         companyPhoto: companyPhotoUrl,
         employerIds: currentCompany.employerIds || [],
-        draft: null, // Explicitly set to null to remove draft from database
+        drafts: remainingDrafts,
       };
 
-      // Add password only if changed (check both draft and form)
-      const draftPassword = hasDraft && currentCompany.draft?.password;
+      // Add password only if changed
+      const draftPassword = hasUserDraft && userDraft?.password;
       const formPassword = formData.password && formData.password.trim();
 
       if (draftPassword || formPassword) {
         updateData.password = draftPassword || formPassword;
       }
 
-      const response = await fetch(`/api/companies/${user.id}`, {
+      const response = await fetch(`/api/companies/${companyId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -419,11 +472,12 @@ const CompanyProfile = () => {
       // Clear draft state immediately after successful publish
       setCompanyData(updatedCompany);
       setHasDraft(false);
+      setCanSeeDraft(false);
       setDraftData(null);
       setExistingPhotoUrl(companyPhotoUrl);
       setCompanyPhoto(null);
 
-      // Reset form data to published values (no draft)
+      // Reset form data to published values
       setFormData({
         name: updatedCompany.name || "",
         description: updatedCompany.description || "",
@@ -437,7 +491,7 @@ const CompanyProfile = () => {
 
       setMessage({
         type: "success",
-        text: "✨ Company profile published successfully! Draft has been removed.",
+        text: "✨ Company profile published successfully! Your draft has been removed.",
       });
 
       // Update user context if needed
@@ -826,8 +880,8 @@ const CompanyProfile = () => {
               {/* Action Buttons */}
               {editMode && (
                 <div className="space-y-3 pt-6 border-t border-gray-200">
-                  {/* Draft indicator */}
-                  {hasDraft && (
+                  {/* Draft indicator - only show if user can see the draft */}
+                  {hasDraft && canSeeDraft && (
                     <div className="w-full p-3 bg-amber-50 border border-amber-200 rounded-lg">
                       <div className="flex items-center gap-2">
                         <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
@@ -838,6 +892,38 @@ const CompanyProfile = () => {
                       </div>
                     </div>
                   )}
+
+                  {/* Warning if other drafts exist */}
+                  {hasDraft &&
+                    canSeeDraft &&
+                    companyData?.drafts &&
+                    Object.keys(companyData.drafts).length > 1 && (
+                      <div className="w-full p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                          <span className="text-sm text-blue-700 font-medium">
+                            ℹ️ {Object.keys(companyData.drafts).length - 1}{" "}
+                            other user(s) also have draft changes in progress.
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                  {/* Warning if draft exists but user didn't create one */}
+                  {!hasDraft &&
+                    companyData?.drafts &&
+                    Object.keys(companyData.drafts).length > 0 && (
+                      <div className="w-full p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                          <span className="text-sm text-blue-700 font-medium">
+                            ℹ️ {Object.keys(companyData.drafts).length} other
+                            user(s) have unpublished draft changes. You're
+                            viewing the published version.
+                          </span>
+                        </div>
+                      </div>
+                    )}
 
                   <div className="flex flex-wrap gap-3">
                     {/* Save as Draft Button */}
@@ -875,7 +961,9 @@ const CompanyProfile = () => {
                       ) : (
                         <>
                           <CheckCircle className="h-4 w-4" />
-                          {hasDraft ? "Publish Changes" : "Save & Publish"}
+                          {hasDraft && canSeeDraft
+                            ? "Publish Changes"
+                            : "Save & Publish"}
                         </>
                       )}
                     </button>
@@ -889,8 +977,8 @@ const CompanyProfile = () => {
                       Cancel
                     </button>
 
-                    {/* Discard Draft Button (only show if draft exists) */}
-                    {hasDraft && (
+                    {/* Discard Draft Button (only show if user created the draft) */}
+                    {hasDraft && canSeeDraft && (
                       <button
                         onClick={handleDiscardDraft}
                         disabled={isSaving || isSavingDraft}
@@ -917,12 +1005,16 @@ const CompanyProfile = () => {
                             privately - only you can see them
                           </li>
                           <li>
-                            <strong>Publish Changes:</strong> Make your changes
-                            visible to everyone
+                            <strong>Publish Changes:</strong> Make changes
+                            visible to everyone (removes only your draft)
                           </li>
                           <li>
-                            <strong>Discard Draft:</strong> Delete draft and
-                            revert to published version
+                            <strong>Discard Draft:</strong> Delete your draft
+                            and revert to published version
+                          </li>
+                          <li>
+                            <strong>Multiple Drafts:</strong> Each user can
+                            maintain their own draft independently
                           </li>
                         </ul>
                       </div>
@@ -981,8 +1073,8 @@ const CompanyProfile = () => {
                 </button>
               </div>
 
-              {/* Draft Status Card */}
-              {hasDraft && !editMode && (
+              {/* Draft Status Card - only show if user can see the draft */}
+              {hasDraft && canSeeDraft && !editMode && (
                 <div className="mt-6 p-4 bg-amber-50 border-2 border-amber-200 rounded-xl">
                   <div className="flex items-start gap-3">
                     <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
